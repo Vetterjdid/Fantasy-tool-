@@ -1,626 +1,1316 @@
 <title>War Room</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #F3F5F4;
-    --surface: #FFFFFF;
-    --surface-2: #E9EDEC;
-    --border: #D7DCDA;
-    --ink: #16201C;
-    --ink-dim: #5B6864;
-    --accent: #12777A;
-    --accent-ink: #FFFFFF;
-    --score: #A56A08;
-    --good: #2E8B57;
-    --warn: #B9720F;
-    --bad: #C1443A;
-    --radius: 10px;
-    --font-display: "Oswald", "Arial Narrow", sans-serif;
-    --font-body: "IBM Plex Sans", system-ui, sans-serif;
-    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bg: #12161A;
-      --surface: #1B2126;
-      --surface-2: #212A30;
-      --border: #2B343A;
-      --ink: #E7ECEA;
-      --ink-dim: #93A19C;
-      --accent: #3FD0C9;
-      --accent-ink: #0B1210;
-      --score: #E8A33D;
-      --good: #4FBE82;
-      --warn: #E0A23D;
-      --bad: #E5776B;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #12161A;
-    --surface: #1B2126;
-    --surface-2: #212A30;
-    --border: #2B343A;
-    --ink: #E7ECEA;
-    --ink-dim: #93A19C;
-    --accent: #3FD0C9;
-    --accent-ink: #0B1210;
-    --score: #E8A33D;
-    --good: #4FBE82;
-    --warn: #E0A23D;
-    --bad: #E5776B;
+    color-scheme: dark;
+    --void: #070B11;
+    --surface: #0E151D;
+    --surface-2: #131D27;
+    --surface-3: #18242F;
+    --line: #1D2A37;
+    --line-soft: #16212C;
+    --ink: #E9F1F8;
+    --ink-2: #A5B6C6;
+    --ink-3: #6B7D8E;
+    --accent: #2F9BFF;
+    --accent-2: #63DCFF;
+    --pos: #35D07F;
+    --neg: #FF6161;
+    --warn: #FFB245;
+    --r-lg: 20px;
+    --r-md: 14px;
+    --r-sm: 11px;
+    --font: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   }
 
   * { box-sizing: border-box; }
+
   body {
-    background: var(--bg);
+    margin: 0;
+    background: var(--void);
     color: var(--ink);
-    font-family: var(--font-body);
-    padding-inline: 20px;
-    padding-block: 20px 48px;
-    max-width: 1180px;
-    margin-inline: auto;
+    font-family: var(--font);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    padding-inline: 16px;
+    padding-block: 16px;
   }
-  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
-  a { color: var(--accent); }
-  button { font-family: inherit; }
-  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+  #sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+  .stage { position: relative; z-index: 1; max-width: 1460px; margin-inline: auto; }
+
+  .app {
+    display: grid;
+    grid-template-columns: 64px 232px minmax(0, 1fr);
+    background: linear-gradient(180deg, #0B1219, #070C12);
+    border: 1px solid var(--line);
+    border-radius: 22px;
+    overflow: hidden;
+    box-shadow: 0 40px 120px -44px rgba(0, 0, 0, .95), 0 0 0 1px rgba(80, 160, 255, .05);
+    min-height: calc(100vh - 32px);
+  }
+
+  h1, h2, h3 { margin: 0; font-weight: 700; letter-spacing: -.01em; text-wrap: balance; }
+  button { font: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .micro {
+    font-size: 10.5px; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--ink-3);
+  }
+
+  /* ---------- icon rail ---------- */
+  .rail {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 14px 0; border-right: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, #0C141C, #070D13);
+  }
+  .brand {
+    width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
+    background: linear-gradient(180deg, #2B92F5, #0C4FA0); color: #fff;
+    box-shadow: 0 10px 24px -10px rgba(47, 155, 255, .95), inset 0 1px 0 rgba(255, 255, 255, .3);
+  }
+  .rail-sep { width: 22px; height: 1px; background: var(--line); margin: 4px 0; }
+  .rail-btn {
+    width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
+    border: 1px solid transparent; background: var(--surface-2); color: var(--ink-3);
+    transition: color .15s, border-color .15s;
+  }
+  .rail-btn:hover { color: var(--ink); border-color: var(--line); }
+  .rail-btn.is-active {
+    color: #CFEBFF; border-color: rgba(99, 220, 255, .5);
+    background: linear-gradient(180deg, rgba(47, 155, 255, .28), rgba(47, 155, 255, .05));
+    box-shadow: 0 0 20px -4px rgba(47, 155, 255, .75), inset 0 1px 0 rgba(255, 255, 255, .14);
+  }
+  .rail-foot { margin-top: auto; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+
+  /* ---------- sidebar ---------- */
+  .side {
+    padding: 14px 12px; border-right: 1px solid var(--line-soft);
+    display: flex; flex-direction: column; gap: 16px;
+    background: linear-gradient(180deg, #0B1219, #080E15);
+  }
+  .picker { position: relative; }
+  .profile {
+    width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px;
+    border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink); text-align: left;
+  }
+  .profile:hover { border-color: #2A3B4C; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 12px; flex: none; display: grid; place-items: center;
+    background: linear-gradient(180deg, #16303F, #0C1A24);
+    border: 1px solid var(--line); color: var(--accent-2);
+  }
+  .profile .who { min-width: 0; flex: 1; overflow: hidden; }
+  .profile .name,
+  .profile .sub { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile .name { font-weight: 700; font-size: 13.5px; line-height: 1.25; }
+  .profile .sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+  .menu {
+    position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 20;
+    padding: 6px; border-radius: var(--r-md); border: 1px solid var(--line);
+    background: #101A23; box-shadow: 0 24px 48px -20px rgba(0, 0, 0, .9);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .menu button {
+    text-align: left; padding: 9px 10px; border-radius: 9px; border: 0;
+    background: none; color: var(--ink-2); font-size: 13px;
+  }
+  .menu button:hover { background: var(--surface-2); color: var(--ink); }
+  .menu button.is-active { color: var(--accent-2); }
+
+  .sec { display: flex; align-items: center; gap: 8px; margin: 0 4px 8px; }
+  .sec::after {
+    content: ''; flex: 1; height: 1px;
+    background: repeating-linear-gradient(90deg, var(--line) 0 3px, transparent 3px 7px);
+  }
+  .nav { display: flex; flex-direction: column; gap: 6px; }
+  .nav-item {
+    position: relative; display: flex; align-items: center; gap: 11px; width: 100%;
+    padding: 10px 12px; border-radius: 12px; border: 1px solid transparent;
+    background: none; color: var(--ink-2); font-weight: 500; text-align: left;
+    transition: background .15s, color .15s, border-color .15s;
+  }
+  .nav-item:hover { background: var(--surface); border-color: var(--line-soft); color: var(--ink); }
+  .nav-item.is-active {
+    color: #EAF6FF; font-weight: 600; border-color: rgba(99, 220, 255, .45);
+    background: linear-gradient(90deg, rgba(47, 155, 255, .3), rgba(47, 155, 255, .04));
+    box-shadow: 0 10px 26px -14px rgba(47, 155, 255, .9), inset 0 1px 0 rgba(255, 255, 255, .1);
+  }
+  .nav-item.is-active::after {
+    content: ''; position: absolute; right: 9px; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 16px; border-radius: 3px; background: rgba(160, 225, 255, .55);
+  }
+
+  /* ---------- topbar ---------- */
+  .main { display: flex; flex-direction: column; min-width: 0; }
   .topbar {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    padding-block-end: 16px;
-    border-bottom: 1px solid var(--border);
-    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 13px 18px; border-bottom: 1px solid var(--line-soft);
   }
-  .brand { display: flex; align-items: baseline; gap: 10px; }
-  .brand h1 { font-size: 1.7rem; letter-spacing: 0.02em; }
-  .brand .tagline { font-size: 0.8rem; color: var(--ink-dim); }
-  .refresh-status { font-size: 0.78rem; color: var(--ink-dim); text-align: right; }
-  .refresh-status strong { color: var(--ink); font-weight: 500; }
-
-  .demo-banner {
-    background: var(--surface-2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 14px;
-    font-size: 0.82rem;
-    color: var(--ink-dim);
-    margin-bottom: 18px;
+  .league-pills { display: flex; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+    color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap;
+    transition: color .15s, border-color .15s;
   }
-  .demo-banner strong { color: var(--ink); }
-
-  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
-  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
-
-  .league-rail { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 12px; }
-  @media (max-width: 720px) {
-    .league-rail { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
-    .league-card { min-width: 200px; }
+  .pill:hover { color: var(--ink); border-color: #2A3B4C; }
+  .pill.is-active {
+    color: #EAF6FF; border-color: rgba(99, 220, 255, .5);
+    background: linear-gradient(180deg, rgba(47, 155, 255, .22), rgba(47, 155, 255, .04));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
   }
-  .rail-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); margin-bottom: 2px; }
-  .league-card {
-    text-align: left;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 10px 12px;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    flex-shrink: 0;
+  .spacer { flex: 1 1 24px; }
+  .search {
+    display: flex; align-items: center; gap: 10px; height: 38px; flex: 1 1 220px; max-width: 380px;
+    padding: 0 6px 0 14px; border-radius: 999px; color: var(--ink-3);
+    border: 1px solid rgba(70, 135, 195, .38); background: rgba(11, 20, 29, .9);
+    box-shadow: 0 0 0 3px rgba(47, 155, 255, .05);
   }
-  .league-card:hover { border-color: var(--accent); }
-  .league-card.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
-  .league-card .name { font-family: var(--font-display); font-size: 1rem; font-weight: 600; }
-  .league-card .meta-row { display: flex; gap: 6px; flex-wrap: wrap; }
+  .search:focus-within { border-color: rgba(99, 220, 255, .65); box-shadow: 0 0 0 3px rgba(47, 155, 255, .12); }
+  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; color: var(--ink); font: inherit; font-size: 13px; }
+  .search input::placeholder { color: var(--ink-3); }
+  .kbd { font-size: 11px; font-weight: 600; color: var(--ink-3); border: 1px solid var(--line); border-radius: 8px; padding: 4px 7px; background: var(--surface-2); }
+  .divider { width: 1px; height: 24px; background: var(--line); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--pos); box-shadow: 0 0 10px var(--pos); }
+  .dot.off { background: var(--ink-3); box-shadow: none; }
+  @media (prefers-reduced-motion: no-preference) {
+    .dot.live { animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1 } 50% { opacity: .35 } }
+  }
+  .btn-primary {
+    height: 38px; padding: 0 20px; border-radius: 999px; border: 1px solid rgba(120, 200, 255, .45);
+    background: linear-gradient(180deg, #3BA6FF, #1C6CD2); color: #fff; font-weight: 600; font-size: 13px;
+    box-shadow: 0 12px 28px -12px rgba(47, 155, 255, .95), inset 0 1px 0 rgba(255, 255, 255, .3);
+  }
+  .btn-primary:disabled { opacity: .6; cursor: default; }
 
+  /* ---------- view shell ---------- */
+  .view { padding: 20px 18px 28px; position: relative; display: flex; flex-direction: column; gap: 18px; }
+  .card {
+    position: relative; border: 1px solid var(--line); border-radius: var(--r-lg);
+    background: linear-gradient(180deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, 0)), var(--surface);
+  }
+  .card::before {
+    content: ''; position: absolute; inset: 0 18px auto; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(120, 205, 255, .45), transparent);
+  }
+
+  /* ---------- hero ---------- */
+  .hero { position: relative; display: grid; grid-template-columns: minmax(240px, 1fr) auto; gap: 22px; align-items: start; }
+  .hero::before {
+    content: ''; position: absolute; z-index: -1; right: 4%; top: -190px;
+    width: 460px; height: 460px; border-radius: 50%; pointer-events: none;
+    background: radial-gradient(circle at 32% 30%, rgba(200, 225, 245, .5), rgba(90, 130, 175, .25) 45%, rgba(10, 20, 32, 0) 70%);
+    filter: blur(2px);
+  }
+  .hero-title { font-size: 21px; font-weight: 700; }
+  .hero-label { margin: 20px 0 6px; }
+  .hero-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .hero-num { font-size: clamp(34px, 4.6vw, 50px); font-weight: 800; letter-spacing: -.025em; line-height: 1; }
+  .hero-num small { font-size: .4em; font-weight: 600; color: var(--ink-3); margin-left: 8px; letter-spacing: 0; }
+  .delta {
+    display: inline-flex; align-items: center; gap: 8px; padding: 7px 8px 7px 14px;
+    border-radius: 999px; border: 1px solid var(--line); background: var(--surface);
+    font-size: 12px; color: var(--ink-2); white-space: nowrap;
+  }
+  .delta b { padding: 3px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+  .delta.up b { color: #062; background: rgba(53, 208, 127, .16); color: var(--pos); }
+  .delta.down b { color: var(--neg); background: rgba(255, 97, 97, .14); }
+
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 212px)); gap: 14px; }
+  .stat { padding: 14px; }
+  .stat .top { display: flex; align-items: center; gap: 10px; }
+  .stat .ico {
+    width: 36px; height: 36px; border-radius: var(--r-sm); flex: none; display: grid; place-items: center;
+    background: var(--surface-3); border: 1px solid var(--line); color: var(--accent-2);
+  }
+  .stat .k { font-size: 11.5px; color: var(--ink-3); font-weight: 500; }
+  .stat .v { font-size: 19px; font-weight: 700; margin-top: 1px; line-height: 1.1; }
+  .stat .chart { margin-top: 12px; height: 62px; }
+  .stat .foot { margin-top: 8px; font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* ---------- main grid ---------- */
+  .grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+  .pad { padding: 18px; }
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
   .chip {
-    display: inline-flex; align-items: center; gap: 4px;
-    font-size: 0.7rem; font-weight: 500;
-    padding: 2px 7px; border-radius: 999px;
-    border: 1px solid var(--border); color: var(--ink-dim);
-    text-transform: uppercase; letter-spacing: 0.03em;
-    white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; color: #CDEBFF;
+    border: 1px solid rgba(99, 220, 255, .4);
+    background: linear-gradient(180deg, rgba(47, 155, 255, .22), rgba(47, 155, 255, .05));
   }
-  .chip.pos { font-family: var(--font-mono); color: var(--ink); background: var(--surface-2); border-color: transparent; }
-  .chip.good { color: var(--good); border-color: var(--good); }
-  .chip.warn { color: var(--warn); border-color: var(--warn); }
-  .chip.bad { color: var(--bad); border-color: var(--bad); }
-  .chip.accent { color: var(--accent); border-color: var(--accent); }
 
-  .content { min-width: 0; }
-  .league-summary {
-    display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px;
-    margin-bottom: 14px;
+  /* cylinders */
+  .tubes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; margin-top: 20px; }
+  .tube-col { display: flex; flex-direction: column; align-items: center; gap: 10px; min-width: 0; }
+  .tube-cap {
+    width: 100%; max-width: 74px; text-align: center; padding: 5px 0; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--surface-2);
+    font-size: 12px; font-weight: 600; color: var(--ink-2);
   }
-  .league-summary h2 { font-size: 1.4rem; }
-  .league-summary .sub { color: var(--ink-dim); font-size: 0.85rem; margin-top: 2px; }
-  .league-summary .badges { display: flex; gap: 6px; flex-wrap: wrap; }
-
-  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
-  .tab {
-    background: none; border: none; border-bottom: 2px solid transparent;
-    color: var(--ink-dim); font-size: 0.85rem; font-weight: 500;
-    padding: 8px 4px; margin-bottom: -1px; cursor: pointer;
+  .tube {
+    position: relative; width: 100%; max-width: 74px; height: 188px; border-radius: 999px;
+    border: 1px solid var(--line); overflow: hidden;
+    background: linear-gradient(180deg, #0C141C, #090F16);
   }
-  .tab:hover { color: var(--ink); }
-  .tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+  .tube-fill {
+    position: absolute; left: 4px; right: 4px; bottom: 4px; border-radius: 999px;
+    background: linear-gradient(180deg, #233240, #16222C);
+  }
+  .tube-fill::before {
+    content: ''; position: absolute; left: 0; right: 0; top: -7px; height: 14px;
+    border-radius: 50%; background: #334554;
+  }
+  .tube.is-lead { border-color: rgba(99, 220, 255, .45); }
+  .tube.is-lead .tube-fill {
+    background:
+      radial-gradient(60% 34% at 28% 18%, rgba(180, 240, 255, .95), rgba(180, 240, 255, 0) 70%),
+      radial-gradient(66% 40% at 74% 52%, rgba(88, 170, 255, .85), rgba(88, 170, 255, 0) 72%),
+      radial-gradient(50% 30% at 40% 82%, rgba(150, 225, 255, .55), rgba(150, 225, 255, 0) 75%),
+      linear-gradient(180deg, #2E86E8, #0B2A5C);
+    box-shadow: 0 0 34px rgba(47, 155, 255, .5), inset 0 0 24px rgba(150, 225, 255, .35);
+  }
+  .tube.is-lead .tube-fill::before {
+    background: linear-gradient(180deg, #DFF5FF, #7FD2FF);
+    box-shadow: 0 0 18px rgba(120, 215, 255, .9);
+  }
+  .tube-name {
+    font-size: 12px; font-weight: 500; color: var(--ink-3); max-width: 100%;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tube-col.is-lead .tube-name { color: var(--ink); font-weight: 700; }
 
-  .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .filter-row label { font-size: 0.78rem; color: var(--ink-dim); }
+  /* snapshot */
+  .orb-wrap { position: relative; display: grid; place-items: center; padding: 8px 0 26px; }
+  .orb {
+    width: 126px; height: 126px; border-radius: 50%; position: relative;
+    background: radial-gradient(circle at 34% 26%, #B6ECFF, #3A8FE0 40%, #12386B 72%, #0A1D38 100%);
+    box-shadow: 0 0 56px -6px rgba(47, 155, 255, .55), inset 0 -16px 32px rgba(0, 0, 0, .55), inset 0 10px 22px rgba(255, 255, 255, .2);
+  }
+  .orb::after {
+    content: ''; position: absolute; inset: 16% 12% 14%; border-radius: 50%;
+    background: linear-gradient(180deg, rgba(10, 25, 45, 0) 44%, rgba(40, 120, 200, .8) 46%);
+    filter: blur(2px);
+  }
+  .beam {
+    position: absolute; bottom: 0; width: 90px; height: 58px;
+    clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%);
+    background: linear-gradient(180deg, rgba(120, 205, 255, .5), rgba(120, 205, 255, 0));
+    filter: blur(5px);
+  }
+  .metric { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px dashed rgba(255, 255, 255, .08); }
+  .metric:last-of-type { border-bottom: 0; }
+  .metric .mk { font-size: 12.5px; color: var(--ink-2); }
+  .metric .mv { font-size: 13.5px; font-weight: 700; }
+  .leader {
+    position: relative; margin-top: 14px; padding: 16px; border-radius: 17px; overflow: hidden;
+    border: 1px solid rgba(99, 220, 255, .34);
+    background: linear-gradient(135deg, rgba(26, 84, 148, .6), rgba(11, 28, 50, .55));
+  }
+  .leader .sparkles { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: rgba(140, 225, 255, .85); }
+  .leader .lname { font-size: 22px; font-weight: 800; letter-spacing: -.02em; margin-top: 4px; }
+  .leader .lpill {
+    display: inline-flex; margin-top: 12px; padding: 6px 12px; border-radius: 999px; font-size: 11.5px; font-weight: 600;
+    border: 1px solid rgba(160, 230, 255, .3); background: rgba(6, 22, 40, .55); color: #CFEBFF;
+  }
+
+  /* position cards */
+  .agents { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+  .agent { padding: 16px; }
+  .agent .ico {
+    width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center;
+    background: var(--surface-3); border: 1px solid var(--line); color: var(--accent-2);
+  }
+  .agent .aname { font-size: 16px; font-weight: 700; margin-top: 14px; }
+  .agent .asub { font-size: 12px; color: var(--ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .minis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+  .mini {
+    position: relative; padding: 10px 12px; border-radius: 12px; overflow: hidden;
+    background: var(--surface-2); border: 1px solid var(--line-soft);
+  }
+  .mini::before {
+    content: ''; position: absolute; inset: 0 14px auto; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(120, 205, 255, .8), transparent);
+  }
+  .mini .mk { font-size: 10.5px; color: var(--ink-3); }
+  .mini .mv { font-size: 13.5px; font-weight: 700; margin-top: 3px; }
+
+  .badge { font-size: 11px; font-weight: 600; padding: 5px 11px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .badge.blue { color: #7FCBFF; border-color: rgba(99, 220, 255, .42); background: rgba(47, 155, 255, .12); }
+  .badge.green { color: #57E39B; border-color: rgba(53, 208, 127, .42); background: rgba(53, 208, 127, .12); }
+  .badge.warn { color: var(--warn); border-color: rgba(255, 178, 69, .42); background: rgba(255, 178, 69, .12); }
+  .badge.neg { color: var(--neg); border-color: rgba(255, 97, 97, .42); background: rgba(255, 97, 97, .12); }
+  .badge.mute { color: var(--ink-3); border-color: var(--line); background: var(--surface-2); }
+
+  /* ---------- rosters / tables ---------- */
+  .teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .team { padding: 16px; }
+  .team .th { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+  .team .tn { font-size: 15px; font-weight: 700; }
+  .team .to { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
+  .slot-label { margin: 14px 0 6px; }
+  .prow { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .prow:last-child { border-bottom: 0; }
+  .prow .pn { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prow .pt { font-size: 11.5px; color: var(--ink-3); }
+  .prow .pp { font-weight: 700; color: var(--accent-2); min-width: 3.6em; text-align: right; }
+  .tag {
+    flex: none; min-width: 34px; text-align: center; font-size: 10.5px; font-weight: 700; letter-spacing: .04em;
+    padding: 3px 7px; border-radius: 7px; background: var(--surface-3); color: var(--ink-2); border: 1px solid var(--line-soft);
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  thead th {
+    text-align: left; padding: 0 14px 12px; white-space: nowrap;
+    font-size: 10.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3);
+  }
+  tbody td { padding: 11px 14px; border-top: 1px solid var(--line-soft); white-space: nowrap; }
+  tbody td.name { white-space: normal; min-width: 160px; font-weight: 500; }
+  tbody tr:hover td { background: rgba(47, 155, 255, .05); }
+  td.pts { font-weight: 700; color: var(--accent-2); }
+  td.rank { font-weight: 700; }
+
+  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   select {
-    font-family: var(--font-body); font-size: 0.85rem;
-    background: var(--surface); color: var(--ink);
-    border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+    height: 34px; padding: 0 10px; border-radius: 10px; font: inherit; font-size: 13px;
+    background: var(--surface-2); color: var(--ink); border: 1px solid var(--line);
   }
 
-  .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
-  .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
-  .team-card .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 8px; }
-  .team-card .head h3 { font-size: 1rem; }
-  .team-card .owner { font-size: 0.75rem; color: var(--ink-dim); }
-  .group-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); margin: 10px 0 4px; }
-  .group-label:first-of-type { margin-top: 4px; }
-  .player-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
-  .player-row:last-child { border-bottom: none; }
-  .player-row .pname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .player-row .nfl { color: var(--ink-dim); font-size: 0.78rem; }
-  .player-row .pts { color: var(--score); font-weight: 600; min-width: 3.4em; text-align: right; }
+  .note { font-size: 12px; color: var(--ink-3); line-height: 1.6; }
+  .empty { padding: 40px 16px; text-align: center; color: var(--ink-3); font-size: 13.5px; }
+  .kv { display: grid; grid-template-columns: minmax(0, 180px) minmax(0, 1fr); gap: 10px 18px; font-size: 13px; }
+  .kv dt { color: var(--ink-3); }
+  .kv dd { margin: 0; font-weight: 600; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
-  thead th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); padding: 6px 10px; border-bottom: 1px solid var(--border); }
-  tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
-  tbody tr:hover { background: var(--surface-2); }
-  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
-  td.pts, td.rank { color: var(--score); font-weight: 600; }
-  td.rank { color: var(--ink); }
-
-  .note { font-size: 0.78rem; color: var(--ink-dim); margin-bottom: 12px; font-style: italic; }
-  .empty-state { padding: 30px 16px; text-align: center; color: var(--ink-dim); font-size: 0.9rem; }
+  /* ---------- responsive ---------- */
+  @media (max-width: 1200px) {
+    .hero { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid { grid-template-columns: 1fr; }
+    .agents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 980px) {
+    .app { grid-template-columns: 60px minmax(0, 1fr); }
+    .side { display: none; }
+  }
+  @media (max-width: 700px) {
+    body { padding-inline: 12px; }
+    .stats { grid-template-columns: 1fr; }
+    .agents { grid-template-columns: 1fr; }
+    .tubes { grid-auto-columns: 62px; overflow-x: auto; padding-bottom: 6px; }
+    .app { grid-template-columns: 1fr; }
+    .rail { flex-direction: row; justify-content: flex-start; padding: 10px 12px; border-right: 0; border-bottom: 1px solid var(--line-soft); overflow-x: auto; }
+    .rail-sep { width: 1px; height: 22px; margin: 0 2px; }
+    .rail-foot { margin-top: 0; margin-left: auto; flex-direction: row; }
+    .search { max-width: none; }
+  }
 </style>
 
-<div class="topbar">
-  <div class="brand">
-    <h1>War Room</h1>
-    <span class="tagline">Multi-league fantasy football control</span>
+<canvas id="sky"></canvas>
+
+<div class="stage">
+  <div class="app">
+    <nav class="rail" id="rail" aria-label="Sections"></nav>
+    <aside class="side">
+      <div class="picker" id="picker"></div>
+      <div>
+        <div class="sec"><span class="micro">Views</span></div>
+        <div class="nav" id="navViews"></div>
+      </div>
+      <div>
+        <div class="sec"><span class="micro">Data</span></div>
+        <div class="nav" id="navData"></div>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div class="league-pills" id="leaguePills"></div>
+        <div class="spacer"></div>
+        <label class="search">
+          <span id="searchIcon"></span>
+          <input id="search" type="search" placeholder="Search players across leagues" autocomplete="off" spellcheck="false">
+          <span class="kbd">⌘K</span>
+        </label>
+        <div class="divider"></div>
+        <span class="pill" id="livePill"></span>
+        <button class="btn-primary" id="refresh">Refresh</button>
+      </header>
+      <div class="view" id="view"></div>
+    </main>
   </div>
-  <div class="refresh-status" id="refreshStatus">Connecting&hellip;</div>
-</div>
-
-<div id="demoBanner"></div>
-
-<div class="layout">
-  <nav class="league-rail" id="leagueRail">
-    <div class="rail-label">Leagues</div>
-  </nav>
-  <main class="content">
-    <div class="league-summary" id="leagueSummary"></div>
-    <div class="tabs" id="tabs">
-      <button class="tab active" data-tab="rosters">Rosters</button>
-      <button class="tab" data-tab="waivers">Waiver Wire</button>
-      <button class="tab" data-tab="rankings">Rankings</button>
-    </div>
-    <div id="panel"></div>
-  </main>
 </div>
 
 <script>
 (function () {
   'use strict';
 
-  var POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
-  var POSITION_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, FLEX: 4, K: 5, DEF: 6 };
+  var POS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  var POS_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, K: 4, DEF: 5 };
   var SLOT_ORDER = { starter: 0, bench: 1, ir: 2, taxi: 3 };
-  var SLOT_LABEL = { starter: 'Starters', bench: 'Bench', ir: 'Injured Reserve', taxi: 'Taxi Squad' };
+  var SLOT_LABEL = { starter: 'Starters', bench: 'Bench', ir: 'Injured reserve', taxi: 'Taxi squad' };
+  var WATCH_POS = ['QB', 'RB', 'WR', 'TE'];
+  var POS_ICON = { QB: 'target', RB: 'bolt', WR: 'trend', TE: 'shield' };
 
-  var state = {
-    leagues: [],
-    players: {},
-    rankings: [],
-    meta: {},
-    teams: [],
-    rosterSlots: [],
-    projections: {},
-    selectedLeagueId: null,
-    activeTab: 'rosters',
-    waiverPosFilter: 'ALL',
-    rankPosFilter: 'ALL',
-    dbAvailable: null,
+  var ICONS = {
+    brand: '<path d="M20 12a8 8 0 1 0-8 8"/><circle cx="12" cy="12" r="3.4"/>',
+    grid: '<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',
+    users: '<circle cx="9" cy="8.5" r="3"/><path d="M3.5 19.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5M16 6.2a3 3 0 0 1 0 5.6M17.6 14.6c1.9.6 3 2.3 3 4.9"/>',
+    swap: '<path d="M4 9h12m-3.2-3.2L16 9l-3.2 3.2M20 15H8m3.2-3.2L8 15l3.2 3.2"/>',
+    list: '<path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/>',
+    search: '<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/>',
+    refresh: '<path d="M20 12a8 8 0 1 1-2.5-5.8M20 4v4h-4"/>',
+    pulse: '<path d="M3 12h4l2.5-6 4 12L16 12h5"/>',
+    target: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2"/>',
+    bolt: '<path d="M13 3 5 13h5l-1 8 8-10h-5z"/>',
+    trend: '<path d="M4 15.5 9 10l3.5 3.5L20 6M20 6h-5M20 6v5"/>',
+    shield: '<path d="M12 3.5 5 6.5v5c0 4.2 2.9 7.4 7 9 4.1-1.6 7-4.8 7-9v-5z"/>',
+    football: '<path d="M5 19c-1.3-6 7.7-15 14-14 1.3 6-7.7 15-14 14z"/><path d="m9.6 14.4 4.8-4.8M10.9 11.3l1.8 1.8M12.4 9.8l1.8 1.8"/>',
+    chart: '<path d="M5 19V9M10 19V5M15 19v-6M20 19v-9"/>',
+    heart: '<path d="M12 19.5C7 16.4 4 13.6 4 10.4A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 8 2.4c0 3.2-3 6-8 9.1z"/>',
+    sparkle: '<path d="M12 3.5 13.7 9l5.5 1.7-5.5 1.7L12 18l-1.7-5.6L4.8 10.7 10.3 9z"/>',
+    chevron: '<path d="m7 10 5 5 5-5"/>',
+    info: '<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>'
   };
 
-  var leagueScopedUnsubs = [];
-
-  function el(tag, attrs, children) {
-    var node = document.createElement(tag);
-    attrs = attrs || {};
-    for (var k in attrs) {
-      if (k === 'class') node.className = attrs[k];
-      else if (k === 'text') node.textContent = attrs[k];
-      else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') node.addEventListener(k.slice(2), attrs[k]);
-      else node.setAttribute(k, attrs[k]);
-    }
-    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
-    return node;
+  function icon(name, size) {
+    var s = size || 18;
+    return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
   }
 
-  function statusChip(status) {
-    if (!status || status === 'Active') return null;
-    var short = status, cls = 'warn';
-    if (/injured reserve/i.test(status)) { short = 'IR'; cls = 'bad'; }
-    else if (/^out/i.test(status)) { short = 'OUT'; cls = 'bad'; }
-    else if (/questionable/i.test(status)) { short = 'Q'; cls = 'warn'; }
-    else if (/doubtful/i.test(status)) { short = 'D'; cls = 'warn'; }
-    else if (/inactive/i.test(status)) { short = 'INA'; cls = 'ink-dim'; }
-    return el('span', { class: 'chip ' + cls, text: short });
+  function el(tag, props, kids) {
+    var n = document.createElement(tag);
+    props = props || {};
+    Object.keys(props).forEach(function (k) {
+      var v = props[k];
+      if (v === null || v === undefined || v === false) return;
+      if (k === 'class') n.className = v;
+      else if (k === 'text') n.textContent = v;
+      else if (k === 'html') n.innerHTML = v;
+      else if (k.slice(0, 2) === 'on' && typeof v === 'function') n.addEventListener(k.slice(2), v);
+      else n.setAttribute(k, v);
+    });
+    (kids || []).forEach(function (c) { if (c) n.appendChild(c); });
+    return n;
   }
 
-  function relativeTime(iso) {
+  var VIEWS = [
+    { id: 'dashboard', label: 'Dashboard', icon: 'grid' },
+    { id: 'rosters', label: 'Rosters', icon: 'users' },
+    { id: 'waivers', label: 'Waiver wire', icon: 'swap' },
+    { id: 'rankings', label: 'Rankings', icon: 'list' }
+  ];
+
+  var state = {
+    leagues: [], teams: [], slots: [], rankings: [], players: {}, proj: {}, meta: {},
+    leagueId: null, view: 'dashboard', posFilter: 'ALL', query: '',
+    menuOpen: false, dbReady: null, syncing: false, syncedAt: null
+  };
+
+  var db = null;
+
+  // ---------- derivations ----------
+  function activeLeague() {
+    for (var i = 0; i < state.leagues.length; i++) if (state.leagues[i].id === state.leagueId) return state.leagues[i];
+    return null;
+  }
+  function teamsOf(lid) { return state.teams.filter(function (t) { return t.leagueId === lid; }); }
+  function slotsOf(lid) { return state.slots.filter(function (s) { return s.leagueId === lid; }); }
+  function projOf(lid, pid) {
+    var v = state.proj[lid + '|' + pid];
+    return typeof v === 'number' ? v : null;
+  }
+  function starterTotal(lid, teamId) {
+    return slotsOf(lid).reduce(function (sum, s) {
+      return s.teamId === teamId && s.slot === 'starter' ? sum + (projOf(lid, s.playerId) || 0) : sum;
+    }, 0);
+  }
+  function teamsRanked(lid) {
+    return teamsOf(lid).map(function (t) {
+      var copy = {};
+      Object.keys(t).forEach(function (k) { copy[k] = t[k]; });
+      copy.proj = starterTotal(lid, t.id);
+      return copy;
+    });
+  }
+  function availableOf(lid) {
+    var taken = {};
+    slotsOf(lid).forEach(function (s) { taken[s.playerId] = true; });
+    return Object.keys(state.players).map(function (id) { return state.players[id]; })
+      .filter(function (p) { return !taken[p.id] && p.nflTeam && POS.indexOf(p.position) !== -1; });
+  }
+  function byProjDesc(lid) {
+    return function (a, b) { return (projOf(lid, b.id) || 0) - (projOf(lid, a.id) || 0); };
+  }
+  function num(v, d) { return Number(v || 0).toFixed(d === undefined ? 1 : d); }
+  function grouped(v, d) {
+    return Number(v || 0).toLocaleString('en-US', { minimumFractionDigits: d === undefined ? 1 : d, maximumFractionDigits: d === undefined ? 1 : d });
+  }
+  function relTime(iso) {
     if (!iso) return 'never';
-    var diffMs = Date.now() - new Date(iso).getTime();
-    var mins = Math.round(diffMs / 60000);
+    var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
     if (mins < 1) return 'just now';
     if (mins < 60) return mins + ' min ago';
     var hrs = Math.round(mins / 60);
     if (hrs < 24) return hrs + ' hr ago';
     return Math.round(hrs / 24) + ' d ago';
   }
-
-  function renderRefreshStatus() {
-    var out = document.getElementById('refreshStatus');
-    out.innerHTML = '';
-    if (state.dbAvailable === false) {
-      out.textContent = 'Live data unavailable in this view';
-      return;
-    }
-    if (state.dbAvailable === null) {
-      out.textContent = 'Connecting…';
-      return;
-    }
-    var label = document.createElement('span');
-    label.textContent = 'Last refreshed ';
-    var strong = document.createElement('strong');
-    strong.textContent = relativeTime(state.meta.lastRefreshedAt);
-    out.appendChild(label);
-    out.appendChild(strong);
+  function statusBadge(status) {
+    if (!status || status === 'Active') return null;
+    if (/injured reserve/i.test(status)) return { text: 'IR', cls: 'neg' };
+    if (/^out/i.test(status)) return { text: 'OUT', cls: 'neg' };
+    if (/questionable/i.test(status)) return { text: 'Q', cls: 'warn' };
+    if (/doubtful/i.test(status)) return { text: 'D', cls: 'warn' };
+    return { text: String(status).slice(0, 3).toUpperCase(), cls: 'mute' };
   }
 
-  function renderDemoBanner() {
-    var host = document.getElementById('demoBanner');
-    host.innerHTML = '';
-    if (!state.meta.demoMode) return;
-    host.appendChild(el('div', { class: 'demo-banner' }, [
-      el('strong', { text: 'Demo data. ' }),
-      document.createTextNode(state.meta.demoNote || 'Connect a real league to replace this.'),
-    ]));
+  // ---------- svg charts (numbers only, never interpolated strings) ----------
+  function curveChart(values, w, h) {
+    if (values.length < 2) return '';
+    var max = Math.max.apply(null, values), min = Math.min.apply(null, values);
+    var span = (max - min) || 1;
+    var pts = values.map(function (v, i) {
+      return [(i / (values.length - 1)) * (w - 8) + 4, h - 8 - ((v - min) / span) * (h - 18)];
+    });
+    var d = pts.map(function (p, i) { return (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    var area = d + ' L' + pts[pts.length - 1][0].toFixed(1) + ' ' + h + ' L' + pts[0][0].toFixed(1) + ' ' + h + ' Z';
+    var grid = '';
+    for (var g = 1; g < 4; g++) {
+      var y = (h / 4) * g;
+      grid += '<line x1="0" y1="' + y.toFixed(1) + '" x2="' + w + '" y2="' + y.toFixed(1) + '" stroke="rgba(53,208,127,.14)" stroke-width="1"/>';
+    }
+    for (var gx = 1; gx < 6; gx++) {
+      var x = (w / 6) * gx;
+      grid += '<line x1="' + x.toFixed(1) + '" y1="0" x2="' + x.toFixed(1) + '" y2="' + h + '" stroke="rgba(53,208,127,.1)" stroke-width="1"/>';
+    }
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1">' +
+      '<stop offset="0%" stop-color="rgba(53,208,127,.35)"/><stop offset="100%" stop-color="rgba(53,208,127,0)"/>' +
+      '</linearGradient></defs>' + grid +
+      '<path d="' + area + '" fill="url(#cg)"/>' +
+      '<path d="' + d + '" fill="none" stroke="#35D07F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="' + pts[0][0].toFixed(1) + '" cy="' + pts[0][1].toFixed(1) + '" r="3.4" fill="#8CF0BC"/>' +
+      '</svg>';
   }
 
-  function renderLeagueRail() {
-    var rail = document.getElementById('leagueRail');
+  function barsChart(values, w, h, avg) {
+    if (!values.length) return '';
+    var max = Math.max.apply(null, values.concat([avg || 0])) || 1;
+    var gap = 5;
+    var bw = (w - gap * (values.length - 1)) / values.length;
+    var bars = values.map(function (v, i) {
+      var bh = Math.max(3, (v / max) * (h - 12));
+      var x = i * (bw + gap);
+      var y = h - bh;
+      var fill = i === 0 ? '#2F9BFF' : 'rgba(255,255,255,.1)';
+      var glow = i === 0 ? ' filter="url(#bg1)"' : '';
+      return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw.toFixed(1) + '" height="' + bh.toFixed(1) +
+        '" rx="' + Math.min(bw / 2, 5).toFixed(1) + '" fill="' + fill + '"' + glow + '/>';
+    }).join('');
+    var line = '';
+    if (avg) {
+      var ay = h - (avg / max) * (h - 12);
+      line = '<line x1="0" y1="' + ay.toFixed(1) + '" x2="' + w + '" y2="' + ay.toFixed(1) +
+        '" stroke="rgba(180,205,225,.45)" stroke-width="1" stroke-dasharray="3 4"/>';
+    }
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<defs><filter id="bg1" x="-60%" y="-60%" width="220%" height="220%">' +
+      '<feDropShadow dx="0" dy="0" stdDeviation="3.5" flood-color="#2F9BFF" flood-opacity="0.85"/></filter></defs>' +
+      bars + line + '</svg>';
+  }
+
+  function healthChart(counts, w, h) {
+    var total = counts.active + counts.warn + counts.out;
+    if (!total) return '';
+    var segs = [
+      { v: counts.active, c: '#35D07F' },
+      { v: counts.warn, c: '#FFB245' },
+      { v: counts.out, c: '#FF6161' }
+    ];
+    var x = 0, out = '';
+    var barY = h - 26, barH = 14;
+    segs.forEach(function (s) {
+      if (!s.v) return;
+      var sw = (s.v / total) * w;
+      out += '<rect x="' + x.toFixed(1) + '" y="' + barY + '" width="' + Math.max(sw - 3, 2).toFixed(1) +
+        '" height="' + barH + '" rx="6" fill="' + s.c + '"/>';
+      x += sw;
+    });
+    var flagged = counts.warn + counts.out;
+    var pct = Math.round((counts.active / total) * 100);
+    var bubbleW = 64;
+    var bx = (w - bubbleW) / 2;
+    out += '<rect x="' + bx.toFixed(1) + '" y="4" width="' + bubbleW + '" height="20" rx="10" fill="rgba(47,155,255,.18)" stroke="rgba(99,220,255,.45)"/>';
+    out += '<text x="' + (bx + bubbleW / 2).toFixed(1) + '" y="18" text-anchor="middle" font-size="11" font-weight="700" fill="#CFEBFF" font-family="inherit">' + pct + '% fit</text>';
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" preserveAspectRatio="none" aria-hidden="true">' + out + '</svg>';
+  }
+
+  // ---------- chrome ----------
+  function paintRail() {
+    var rail = document.getElementById('rail');
     rail.innerHTML = '';
-    rail.appendChild(el('div', { class: 'rail-label', text: 'Leagues' }));
-    if (state.leagues.length === 0) {
-      rail.appendChild(el('div', { class: 'note', text: state.dbAvailable === false ? '' : 'No leagues connected yet.' }));
-      return;
+    rail.appendChild(el('div', { class: 'brand', html: icon('brand', 21) }));
+    rail.appendChild(el('div', { class: 'rail-sep' }));
+    VIEWS.forEach(function (v) {
+      rail.appendChild(el('button', {
+        class: 'rail-btn' + (state.view === v.id ? ' is-active' : ''),
+        html: icon(v.icon), title: v.label, 'aria-label': v.label,
+        onclick: function () { go(v.id); }
+      }));
+    });
+    var foot = el('div', { class: 'rail-foot' }, [
+      el('button', {
+        class: 'rail-btn' + (state.view === 'sync' ? ' is-active' : ''),
+        html: icon('pulse'), title: 'Sync status', 'aria-label': 'Sync status',
+        onclick: function () { go('sync'); }
+      })
+    ]);
+    rail.appendChild(foot);
+  }
+
+  function paintPicker() {
+    var host = document.getElementById('picker');
+    host.innerHTML = '';
+    var lg = activeLeague();
+    var btn = el('button', { class: 'profile', onclick: function () { state.menuOpen = !state.menuOpen; paintPicker(); } }, [
+      el('span', { class: 'avatar', html: icon('football', 20) }),
+      el('span', { class: 'who' }, [
+        el('span', { class: 'name', text: lg ? lg.name : 'No league' }),
+        el('span', { class: 'sub', text: lg ? (lg.season + ' · ' + String(lg.scoringType || '').toUpperCase()) : 'Waiting for data' })
+      ]),
+      el('span', { html: icon('chevron', 16), style: 'color:var(--ink-3)' })
+    ]);
+    host.appendChild(btn);
+    if (state.menuOpen && state.leagues.length) {
+      host.appendChild(el('div', { class: 'menu' }, state.leagues.map(function (l) {
+        return el('button', {
+          class: l.id === state.leagueId ? 'is-active' : '', text: l.name,
+          onclick: function () { state.leagueId = l.id; state.menuOpen = false; paintAll(); }
+        });
+      })));
     }
-    state.leagues.forEach(function (league) {
-      var card = el('button', {
-        class: 'league-card' + (league.id === state.selectedLeagueId ? ' active' : ''),
-        onclick: function () { selectLeague(league.id); },
-      }, [
-        el('div', { class: 'name', text: league.name }),
-        el('div', { class: 'meta-row' }, [
-          el('span', { class: 'chip', text: league.platform }),
-          el('span', { class: 'chip', text: (league.scoringType || '').toUpperCase() }),
-        ]),
-      ]);
-      rail.appendChild(card);
+  }
+
+  function paintNav() {
+    var views = document.getElementById('navViews');
+    views.innerHTML = '';
+    VIEWS.forEach(function (v) {
+      views.appendChild(el('button', {
+        class: 'nav-item' + (state.view === v.id ? ' is-active' : ''),
+        onclick: function () { go(v.id); }
+      }, [el('span', { html: icon(v.icon, 17) }), el('span', { text: v.label })]));
+    });
+    var data = document.getElementById('navData');
+    data.innerHTML = '';
+    data.appendChild(el('button', {
+      class: 'nav-item' + (state.view === 'sync' ? ' is-active' : ''),
+      onclick: function () { go('sync'); }
+    }, [el('span', { html: icon('pulse', 17) }), el('span', { text: 'Sync status' })]));
+  }
+
+  function paintPills() {
+    var host = document.getElementById('leaguePills');
+    host.innerHTML = '';
+    state.leagues.forEach(function (l) {
+      host.appendChild(el('button', {
+        class: 'pill' + (l.id === state.leagueId ? ' is-active' : ''),
+        onclick: function () { state.leagueId = l.id; paintAll(); }
+      }, [el('span', { html: icon('football', 15) }), el('span', { text: l.name })]));
     });
   }
 
-  function renderLeagueSummary() {
-    var host = document.getElementById('leagueSummary');
+  function paintStatus() {
+    var pill = document.getElementById('livePill');
+    pill.innerHTML = '';
+    var live = state.dbReady === true;
+    pill.appendChild(el('span', { class: 'dot' + (live ? ' live' : ' off') }));
+    pill.appendChild(el('span', {
+      text: state.dbReady === null ? 'Connecting' : live ? ('Live · ' + relTime(state.syncedAt || state.meta.lastRefreshedAt)) : 'Offline'
+    }));
+  }
+
+  function paintAll() {
+    paintRail(); paintPicker(); paintNav(); paintPills(); paintStatus(); paintView();
+  }
+
+  function go(view) {
+    state.view = view;
+    state.menuOpen = false;
+    paintAll();
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
+
+  // ---------- views ----------
+  function paintView() {
+    var host = document.getElementById('view');
     host.innerHTML = '';
-    var league = state.leagues.filter(function (l) { return l.id === state.selectedLeagueId; })[0];
-    if (!league) {
-      host.appendChild(el('div', { class: 'sub', text: state.dbAvailable === false ? '' : 'Select a league.' }));
+    if (state.dbReady === false) { host.appendChild(offlinePanel()); return; }
+    if (state.query.trim()) { renderSearch(host); return; }
+    if (state.view === 'sync') { renderSync(host); return; }
+    if (!state.leagues.length) {
+      host.appendChild(el('div', { class: 'card empty', text: state.dbReady === null ? 'Connecting to live data…' : 'No leagues connected yet.' }));
       return;
     }
-    host.appendChild(el('div', {}, [
-      el('h2', { text: league.name }),
-      el('div', { class: 'sub', text: league.totalRosters + ' teams · Week ' + (state.meta.currentWeek || '—') + ' · ' + league.season }),
-    ]));
-    host.appendChild(el('div', { class: 'badges' }, [
-      el('span', { class: 'chip accent', text: league.platform }),
-      el('span', { class: 'chip', text: (league.scoringType || '').toUpperCase() }),
-    ]));
+    if (state.view === 'rosters') renderRosters(host);
+    else if (state.view === 'waivers') renderWaivers(host);
+    else if (state.view === 'rankings') renderRankings(host);
+    else renderDashboard(host);
   }
 
-  function currentLeague() {
-    return state.leagues.filter(function (l) { return l.id === state.selectedLeagueId; })[0] || null;
-  }
-
-  function teamsForCurrentLeague() {
-    return state.teams.filter(function (t) { return t.leagueId === state.selectedLeagueId; });
-  }
-
-  function rosterSlotsForCurrentLeague() {
-    return state.rosterSlots.filter(function (s) { return s.leagueId === state.selectedLeagueId; });
-  }
-
-  function projectedPoints(playerId) {
-    var p = state.projections[state.selectedLeagueId + '::' + playerId];
-    return p ? p.projectedPoints : null;
-  }
-
-  function playerRow(playerId, opts) {
-    opts = opts || {};
-    var player = state.players[playerId];
-    if (!player) return el('div', { class: 'player-row' }, [el('span', { class: 'pname', text: 'Unknown player' })]);
-    var pts = projectedPoints(playerId);
-    var chip = statusChip(player.status);
-    var row = el('div', { class: 'player-row' }, [
-      el('span', { class: 'chip pos', text: player.position }),
-      el('span', { class: 'pname', text: player.fullName }),
-      el('span', { class: 'nfl tabular', text: player.nflTeam || 'FA' }),
+  function offlinePanel() {
+    return el('div', { class: 'card pad' }, [
+      el('h2', { text: 'Live data unavailable in this view' }),
+      el('p', { class: 'note', style: 'margin-top:8px;max-width:60ch', text: 'This dashboard reads its leagues, rosters and projections from the artifact\'s shared database. Open the published artifact to see live data.' })
     ]);
-    if (chip) row.appendChild(chip);
-    if (!opts.hidePoints) row.appendChild(el('span', { class: 'pts tabular', text: pts != null ? pts.toFixed(1) : '—' }));
+  }
+
+  function sectionTitle(text, right) {
+    return el('div', { class: 'card-head', style: 'align-items:center' }, [
+      el('h2', { style: 'font-size:18px', text: text }),
+      right || null
+    ]);
+  }
+
+  function statCard(opts) {
+    return el('div', { class: 'card stat' }, [
+      el('div', { class: 'top' }, [
+        el('span', { class: 'ico', html: icon(opts.icon) }),
+        el('div', { style: 'min-width:0' }, [
+          el('div', { class: 'k', text: opts.label }),
+          el('div', { class: 'v num', text: opts.value })
+        ])
+      ]),
+      el('div', { class: 'chart', html: opts.chart || '' }),
+      el('div', { class: 'foot', text: opts.foot })
+    ]);
+  }
+
+  function renderDashboard(host) {
+    var lg = activeLeague();
+    var lid = lg.id;
+    var teams = teamsRanked(lid).sort(function (a, b) { return b.proj - a.proj; });
+    var week = state.meta.currentWeek || '—';
+    var aggregate = teams.reduce(function (s, t) { return s + t.proj; }, 0);
+    var avgProj = teams.length ? aggregate / teams.length : 0;
+    var lead = teams[0];
+    var deltaPct = avgProj && lead ? ((lead.proj - avgProj) / avgProj) * 100 : 0;
+
+    // hero
+    var hero = el('section', { class: 'hero' }, [
+      el('div', {}, [
+        el('div', { class: 'hero-title', text: lg.name }),
+        el('div', { class: 'micro hero-label', text: 'Aggregate projected points · Week ' + week }),
+        el('div', { class: 'hero-row' }, [
+          el('div', { class: 'hero-num num' }, [
+            document.createTextNode(grouped(aggregate, 1)),
+            el('small', { text: 'pts' })
+          ]),
+          lead ? el('span', { class: 'delta ' + (deltaPct >= 0 ? 'up' : 'down') }, [
+            el('span', { text: 'Leader vs avg' }),
+            el('b', { class: 'num', text: (deltaPct >= 0 ? '+' : '') + num(deltaPct, 1) + '%' })
+          ]) : null
+        ])
+      ]),
+      el('div', { class: 'stats' }, dashboardStats(lid))
+    ]);
+
+    // cylinders + snapshot
+    var maxProj = teams.length ? Math.max.apply(null, teams.map(function (t) { return t.proj; })) || 1 : 1;
+    var tubes = el('div', { class: 'tubes' }, teams.map(function (t, i) {
+      var pct = maxProj ? Math.max(6, (t.proj / maxProj) * 100) : 6;
+      var isLead = i === 0;
+      return el('div', { class: 'tube-col' + (isLead ? ' is-lead' : '') }, [
+        el('div', { class: 'tube-cap num', text: num(t.proj, 1) }),
+        el('div', { class: 'tube' + (isLead ? ' is-lead' : '') }, [
+          el('div', { class: 'tube-fill', style: 'height:calc(' + pct.toFixed(1) + '% - 8px)' })
+        ]),
+        el('div', { class: 'tube-name', title: t.teamName, text: t.teamName })
+      ]);
+    }));
+
+    var chartCard = el('div', { class: 'card pad' }, [
+      el('div', { class: 'card-head' }, [
+        el('div', {}, [
+          el('div', { class: 'micro', text: 'Team projections' }),
+          el('div', { class: 'hero-row', style: 'margin-top:8px' }, [
+            el('div', { class: 'num', style: 'font-size:28px;font-weight:800;letter-spacing:-.02em', text: lead ? num(lead.proj, 1) : '0.0' }),
+            el('span', { class: 'badge blue', text: lead ? lead.ownerName + ' leads' : '—' }),
+            el('span', { class: 'note', text: 'starter totals, week ' + week })
+          ])
+        ]),
+        el('span', { class: 'chip' }, [el('span', { html: icon('chart', 15) }), el('span', { class: 'num', text: 'Avg ' + num(avgProj, 1) })])
+      ]),
+      tubes
+    ]);
+
+    host.appendChild(hero);
+    host.appendChild(el('section', { class: 'grid' }, [chartCard, snapshotCard(lid, teams)]));
+    host.appendChild(el('section', {}, [
+      sectionTitle('Position watch'),
+      el('div', { class: 'agents', style: 'margin-top:14px' }, WATCH_POS.map(function (pos) { return positionCard(lid, pos); }))
+    ]));
+  }
+
+  function dashboardStats(lid) {
+    var starters = slotsOf(lid).filter(function (s) { return s.slot === 'starter'; });
+    var curve = starters.map(function (s) { return projOf(lid, s.playerId); })
+      .filter(function (v) { return v !== null; }).sort(function (a, b) { return b - a; });
+    var topSlot = null, topVal = -1;
+    starters.forEach(function (s) {
+      var v = projOf(lid, s.playerId);
+      if (v !== null && v > topVal) { topVal = v; topSlot = s; }
+    });
+    var topPlayer = topSlot ? state.players[topSlot.playerId] : null;
+
+    var avail = availableOf(lid).sort(byProjDesc(lid));
+    var availTop = avail.slice(0, 9).map(function (p) { return projOf(lid, p.id) || 0; });
+    var rosteredProjs = starters.map(function (s) { return projOf(lid, s.playerId) || 0; });
+    var rosteredAvg = rosteredProjs.length ? rosteredProjs.reduce(function (a, b) { return a + b; }, 0) / rosteredProjs.length : 0;
+    var best = avail[0];
+
+    var counts = { active: 0, warn: 0, out: 0 };
+    slotsOf(lid).forEach(function (s) {
+      var p = state.players[s.playerId];
+      if (!p) return;
+      var b = statusBadge(p.status);
+      if (!b) counts.active++;
+      else if (b.cls === 'neg') counts.out++;
+      else counts.warn++;
+    });
+    var flagged = counts.warn + counts.out;
+
+    return [
+      statCard({
+        icon: 'trend', label: 'Top projection',
+        value: topVal >= 0 ? num(topVal, 1) + ' pts' : '—',
+        chart: curveChart(curve, 190, 62),
+        foot: topPlayer ? topPlayer.fullName + ' · ' + topPlayer.position + ' ' + (topPlayer.nflTeam || '') : 'No starter projections'
+      }),
+      statCard({
+        icon: 'swap', label: 'Waiver upside',
+        value: best ? num(projOf(lid, best.id) || 0, 1) + ' pts' : '—',
+        chart: barsChart(availTop, 190, 62, rosteredAvg),
+        foot: best ? best.fullName + ' · dashed = starter avg' : 'No players available'
+      }),
+      statCard({
+        icon: 'heart', label: 'Roster health',
+        value: flagged === 0 ? 'Clear' : flagged < 4 ? 'Watch' : 'Strained',
+        chart: healthChart(counts, 190, 62),
+        foot: counts.active + ' active · ' + flagged + ' flagged of ' + (counts.active + flagged)
+      })
+    ];
+  }
+
+  function snapshotCard(lid, teams) {
+    var all = teamsOf(lid);
+    var byRecord = all.slice().sort(function (a, b) { return (b.wins - a.wins) || (a.losses - b.losses); })[0];
+    var avgPF = all.length ? all.reduce(function (s, t) { return s + (t.pointsFor || 0); }, 0) / all.length : 0;
+    var spread = teams.length ? teams[0].proj - teams[teams.length - 1].proj : 0;
+
+    var starters = slotsOf(lid).filter(function (s) { return s.slot === 'starter'; });
+    var topSlot = null, topVal = -1;
+    starters.forEach(function (s) {
+      var v = projOf(lid, s.playerId);
+      if (v !== null && v > topVal) { topVal = v; topSlot = s; }
+    });
+    var star = topSlot ? state.players[topSlot.playerId] : null;
+    var starTeam = topSlot ? all.filter(function (t) { return t.id === topSlot.teamId; })[0] : null;
+
+    return el('div', { class: 'card pad' }, [
+      el('h2', { style: 'font-size:18px', text: 'League snapshot' }),
+      el('div', { class: 'orb-wrap' }, [el('div', { class: 'orb' }), el('div', { class: 'beam' })]),
+      el('div', {}, [
+        metricRow('Best record', byRecord ? (byRecord.wins + '-' + byRecord.losses + ' · ' + byRecord.ownerName) : '—', 'var(--accent-2)'),
+        metricRow('Avg points for', grouped(avgPF, 1), null),
+        metricRow('Projection spread', num(spread, 1) + ' pts', 'var(--warn)')
+      ]),
+      el('div', { class: 'leader' }, [
+        el('div', { class: 'sparkles', html: icon('sparkle', 26) + icon('sparkle', 15) }),
+        el('div', { class: 'micro', text: 'Top projected starter' }),
+        el('div', { class: 'lname', text: star ? star.fullName : '—' }),
+        el('div', { class: 'lpill num', text: star ? (star.position + ' · ' + (star.nflTeam || 'FA') + ' · ' + num(topVal, 1) + ' pts' + (starTeam ? ' · ' + starTeam.ownerName : '')) : 'No projections yet' })
+      ])
+    ]);
+  }
+
+  function metricRow(k, v, color) {
+    return el('div', { class: 'metric' }, [
+      el('span', { class: 'mk', text: k }),
+      el('span', { class: 'mv num', style: color ? 'color:' + color : null, text: v })
+    ]);
+  }
+
+  function positionCard(lid, pos) {
+    var avail = availableOf(lid).filter(function (p) { return p.position === pos; }).sort(byProjDesc(lid));
+    var rostered = slotsOf(lid).filter(function (s) {
+      var p = state.players[s.playerId];
+      return p && p.position === pos;
+    }).length;
+    var best = avail[0];
+    var bestProj = best ? projOf(lid, best.id) : null;
+    var cls = avail.length === 0 ? 'mute' : avail.length > 8 ? 'green' : 'blue';
+
+    return el('div', { class: 'card agent' }, [
+      el('div', { style: 'display:flex;align-items:flex-start;justify-content:space-between;gap:10px' }, [
+        el('span', { class: 'ico', html: icon(POS_ICON[pos] || 'target') }),
+        el('span', { class: 'badge ' + cls, text: avail.length + ' open' })
+      ]),
+      el('div', { class: 'aname', text: pos }),
+      el('div', { class: 'asub', title: best ? best.fullName : '', text: best ? 'Top available: ' + best.fullName : 'No players available' }),
+      el('div', { class: 'minis' }, [
+        el('div', { class: 'mini' }, [
+          el('div', { class: 'mk', text: 'Top proj.' }),
+          el('div', { class: 'mv num', text: bestProj !== null && bestProj !== undefined ? num(bestProj, 1) : '—' })
+        ]),
+        el('div', { class: 'mini' }, [
+          el('div', { class: 'mk', text: 'Rostered' }),
+          el('div', { class: 'mv num', text: String(rostered) })
+        ])
+      ])
+    ]);
+  }
+
+  // ---------- rosters ----------
+  function renderRosters(host) {
+    var lid = state.leagueId;
+    var teams = teamsRanked(lid).sort(function (a, b) { return (b.wins - a.wins) || (a.losses - b.losses); });
+    host.appendChild(sectionTitle('Rosters', el('span', { class: 'note', text: teams.length + ' teams · week ' + (state.meta.currentWeek || '—') })));
+    if (!teams.length) { host.appendChild(el('div', { class: 'card empty', text: 'No teams found for this league.' })); return; }
+    var slots = slotsOf(lid);
+    host.appendChild(el('div', { class: 'teams' }, teams.map(function (t) {
+      var mine = slots.filter(function (s) { return s.teamId === t.id; });
+      var groups = {};
+      mine.forEach(function (s) { (groups[s.slot] = groups[s.slot] || []).push(s); });
+      var card = el('div', { class: 'card team' }, [
+        el('div', { class: 'th' }, [
+          el('div', { style: 'min-width:0' }, [
+            el('div', { class: 'tn', text: t.teamName }),
+            el('div', { class: 'to', text: t.ownerName })
+          ]),
+          el('span', { class: 'badge mute num', text: t.wins + '-' + t.losses + (t.ties ? '-' + t.ties : '') })
+        ]),
+        el('div', { class: 'hero-row', style: 'margin-top:12px;gap:8px' }, [
+          el('span', { class: 'badge blue num', text: num(t.proj, 1) + ' proj' }),
+          el('span', { class: 'note num', text: grouped(t.pointsFor, 1) + ' PF' })
+        ])
+      ]);
+      Object.keys(groups).sort(function (a, b) { return SLOT_ORDER[a] - SLOT_ORDER[b]; }).forEach(function (key) {
+        card.appendChild(el('div', { class: 'micro slot-label', text: SLOT_LABEL[key] || key }));
+        groups[key].slice().sort(function (a, b) {
+          var pa = state.players[a.playerId], pb = state.players[b.playerId];
+          var oa = pa && POS_ORDER[pa.position] !== undefined ? POS_ORDER[pa.position] : 9;
+          var ob = pb && POS_ORDER[pb.position] !== undefined ? POS_ORDER[pb.position] : 9;
+          return oa - ob;
+        }).forEach(function (s) { card.appendChild(playerRow(lid, s.playerId)); });
+      });
+      return card;
+    })));
+  }
+
+  function playerRow(lid, playerId) {
+    var p = state.players[playerId];
+    if (!p) return el('div', { class: 'prow' }, [el('span', { class: 'pn', text: 'Unknown player' })]);
+    var v = projOf(lid, playerId);
+    var badge = statusBadge(p.status);
+    var row = el('div', { class: 'prow' }, [
+      el('span', { class: 'tag', text: p.position }),
+      el('span', { class: 'pn', title: p.fullName, text: p.fullName }),
+      el('span', { class: 'pt', text: p.nflTeam || 'FA' })
+    ]);
+    if (badge) row.appendChild(el('span', { class: 'badge ' + badge.cls, text: badge.text }));
+    row.appendChild(el('span', { class: 'pp num', text: v !== null ? num(v, 1) : '—' }));
     return row;
   }
 
-  function renderRosters() {
-    var panel = document.getElementById('panel');
-    panel.innerHTML = '';
-    if (!state.selectedLeagueId) { panel.appendChild(el('div', { class: 'empty-state', text: 'Select a league to view rosters.' })); return; }
-    var teams = teamsForCurrentLeague();
-    if (teams.length === 0) { panel.appendChild(el('div', { class: 'empty-state', text: 'No teams found for this league yet.' })); return; }
-    var slots = rosterSlotsForCurrentLeague();
-    var grid = el('div', { class: 'team-grid' });
+  // ---------- waivers / rankings ----------
+  function positionFilter(onChange) {
+    var sel = el('select', { 'aria-label': 'Filter by position', onchange: function (e) { onChange(e.target.value); } });
+    ['ALL'].concat(POS).forEach(function (pos) {
+      var o = el('option', { value: pos, text: pos === 'ALL' ? 'All positions' : pos });
+      if (pos === state.posFilter) o.selected = true;
+      sel.appendChild(o);
+    });
+    return el('div', { class: 'filters' }, [el('span', { class: 'micro', text: 'Position' }), sel]);
+  }
 
-    teams.slice().sort(function (a, b) { return b.wins - a.wins || a.losses - b.losses; }).forEach(function (team) {
-      var teamSlots = slots.filter(function (s) { return s.teamId === team.id; });
-      var groups = {};
-      teamSlots.forEach(function (s) { (groups[s.slot] = groups[s.slot] || []).push(s); });
+  function renderWaivers(host) {
+    var lid = state.leagueId;
+    var avail = availableOf(lid).sort(byProjDesc(lid));
+    if (state.posFilter !== 'ALL') avail = avail.filter(function (p) { return p.position === state.posFilter; });
+    host.appendChild(sectionTitle('Waiver wire', el('span', { class: 'note', text: avail.length + ' unrostered' })));
+    host.appendChild(positionFilter(function (v) { state.posFilter = v; paintView(); }));
+    if (!avail.length) { host.appendChild(el('div', { class: 'card empty', text: 'No available players match this filter.' })); return; }
+    host.appendChild(tableCard(
+      ['Player', 'Pos', 'Team', 'Proj.', 'Status'],
+      avail.map(function (p) {
+        var v = projOf(lid, p.id);
+        var b = statusBadge(p.status);
+        return [
+          { text: p.fullName, cls: 'name' },
+          { tag: p.position },
+          { text: p.nflTeam || 'FA', cls: 'num' },
+          { text: v !== null ? num(v, 1) : '—', cls: 'pts num' },
+          b ? { badge: b } : { text: 'Active', cls: 'note' }
+        ];
+      })
+    ));
+  }
 
-      var card = el('div', { class: 'team-card' }, [
-        el('div', { class: 'head' }, [
-          el('div', {}, [
-            el('h3', { text: team.teamName }),
-            el('div', { class: 'owner', text: team.ownerName }),
+  function renderRankings(host) {
+    var rows = state.rankings.slice();
+    if (state.posFilter !== 'ALL') rows = rows.filter(function (r) { return r.position === state.posFilter; });
+    rows.sort(function (a, b) {
+      return (POS_ORDER[a.position] - POS_ORDER[b.position]) || (a.rank - b.rank);
+    });
+    host.appendChild(sectionTitle('Rankings', el('span', { class: 'note', text: rows.length + ' ranked' })));
+    host.appendChild(el('div', { class: 'note', style: 'max-width:70ch', text: 'Model ranking derived from this dataset’s own scoring — not a real expert-consensus feed. Connect FantasyPros to replace it.' }));
+    host.appendChild(positionFilter(function (v) { state.posFilter = v; paintView(); }));
+    if (!rows.length) { host.appendChild(el('div', { class: 'card empty', text: 'No rankings available yet.' })); return; }
+    host.appendChild(tableCard(
+      ['Rank', 'Player', 'Pos', 'Team', 'Tier'],
+      rows.map(function (r) {
+        var p = state.players[r.playerId];
+        return [
+          { text: '#' + r.rank, cls: 'rank num' },
+          { text: p ? p.fullName : r.playerId, cls: 'name' },
+          { tag: r.position },
+          { text: p ? (p.nflTeam || 'FA') : '—', cls: 'num' },
+          { text: r.tier !== null && r.tier !== undefined ? 'Tier ' + r.tier : '—', cls: 'note num' }
+        ];
+      })
+    ));
+  }
+
+  function tableCard(headers, rows) {
+    var thead = el('thead', {}, [el('tr', {}, headers.map(function (h) { return el('th', { text: h }); }))]);
+    var tbody = el('tbody', {}, rows.map(function (cells) {
+      return el('tr', {}, cells.map(function (c) {
+        if (c.tag) return el('td', {}, [el('span', { class: 'tag', text: c.tag })]);
+        if (c.badge) return el('td', {}, [el('span', { class: 'badge ' + c.badge.cls, text: c.badge.text })]);
+        return el('td', { class: c.cls || null, text: c.text });
+      }));
+    }));
+    return el('div', { class: 'card pad' }, [el('div', { class: 'table-wrap' }, [el('table', {}, [thead, tbody])])]);
+  }
+
+  // ---------- cross-league search ----------
+  function renderSearch(host) {
+    var q = state.query.trim().toLowerCase();
+    var matches = Object.keys(state.players).map(function (id) { return state.players[id]; })
+      .filter(function (p) { return p.fullName && p.fullName.toLowerCase().indexOf(q) !== -1; })
+      .sort(function (a, b) { return a.fullName.localeCompare(b.fullName); })
+      .slice(0, 40);
+
+    host.appendChild(sectionTitle('Search', el('span', { class: 'note', text: matches.length + ' matching players' })));
+    host.appendChild(el('div', { class: 'note', text: 'Ownership across every connected league.' }));
+
+    if (!matches.length) {
+      host.appendChild(el('div', { class: 'card empty', text: 'No player matches “' + state.query.trim() + '”.' }));
+      return;
+    }
+
+    host.appendChild(el('div', { class: 'teams' }, matches.map(function (p) {
+      var card = el('div', { class: 'card team' }, [
+        el('div', { class: 'th' }, [
+          el('div', { style: 'min-width:0' }, [
+            el('div', { class: 'tn', text: p.fullName }),
+            el('div', { class: 'to', text: p.position + ' · ' + (p.nflTeam || 'Free agent') })
           ]),
-          el('span', { class: 'chip tabular', text: team.wins + '-' + team.losses + (team.ties ? '-' + team.ties : '') }),
-        ]),
+          (function () {
+            var b = statusBadge(p.status);
+            return el('span', { class: 'badge ' + (b ? b.cls : 'green'), text: b ? b.text : 'Active' });
+          })()
+        ])
       ]);
-
-      Object.keys(groups).sort(function (a, b) { return SLOT_ORDER[a] - SLOT_ORDER[b]; }).forEach(function (slotKey) {
-        card.appendChild(el('div', { class: 'group-label', text: SLOT_LABEL[slotKey] || slotKey }));
-        groups[slotKey]
-          .slice()
-          .sort(function (a, b) {
-            var pa = state.players[a.playerId], pb = state.players[b.playerId];
-            var oa = pa ? (POSITION_ORDER[pa.position] ?? 9) : 9;
-            var ob = pb ? (POSITION_ORDER[pb.position] ?? 9) : 9;
-            return oa - ob;
-          })
-          .forEach(function (s) { card.appendChild(playerRow(s.playerId)); });
+      card.appendChild(el('div', { class: 'micro slot-label', text: 'Ownership' }));
+      state.leagues.forEach(function (l) {
+        var slot = slotsOf(l.id).filter(function (s) { return s.playerId === p.id; })[0];
+        var team = slot ? state.teams.filter(function (t) { return t.id === slot.teamId; })[0] : null;
+        var v = projOf(l.id, p.id);
+        card.appendChild(el('div', { class: 'prow' }, [
+          el('span', { class: 'pn', title: l.name, text: l.name }),
+          slot
+            ? el('span', { class: 'badge blue', text: team ? team.ownerName : 'Rostered' })
+            : el('span', { class: 'badge green', text: 'Available' }),
+          el('span', { class: 'pp num', text: v !== null ? num(v, 1) : '—' })
+        ]));
       });
-
-      grid.appendChild(card);
-    });
-
-    panel.appendChild(grid);
+      return card;
+    })));
   }
 
-  function renderWaivers() {
-    var panel = document.getElementById('panel');
-    panel.innerHTML = '';
-    if (!state.selectedLeagueId) { panel.appendChild(el('div', { class: 'empty-state', text: 'Select a league to view its waiver wire.' })); return; }
-
-    var rosteredIds = {};
-    rosterSlotsForCurrentLeague().forEach(function (s) { rosteredIds[s.playerId] = true; });
-    var available = Object.keys(state.players)
-      .map(function (id) { return state.players[id]; })
-      .filter(function (p) { return !rosteredIds[p.id] && p.nflTeam && POSITIONS.indexOf(p.position) !== -1; });
-
-    panel.appendChild(el('div', { class: 'filter-row' }, [
-      el('label', { text: 'Position' }),
-      positionSelect(state.waiverPosFilter, function (val) { state.waiverPosFilter = val; renderWaivers(); }),
-    ]));
-
-    var filtered = state.waiverPosFilter === 'ALL' ? available : available.filter(function (p) { return p.position === state.waiverPosFilter; });
-    filtered.sort(function (a, b) { return (projectedPoints(b.id) || 0) - (projectedPoints(a.id) || 0); });
-
-    if (filtered.length === 0) {
-      panel.appendChild(el('div', { class: 'empty-state', text: 'No available players match this filter.' }));
-      return;
-    }
-
-    var tbody = el('tbody');
-    filtered.forEach(function (p) {
-      var pts = projectedPoints(p.id);
-      var chip = statusChip(p.status);
-      var tr = el('tr', {}, [
-        el('td', {}, [document.createTextNode(p.fullName)]),
-        el('td', {}, [el('span', { class: 'chip pos', text: p.position })]),
-        el('td', { class: 'tabular', text: p.nflTeam || 'FA' }),
-        el('td', { class: 'pts tabular', text: pts != null ? pts.toFixed(1) : '—' }),
-      ]);
-      var statusTd = el('td', {}, chip ? [chip] : []);
-      tr.appendChild(statusTd);
-      tbody.appendChild(tr);
+  // ---------- sync status ----------
+  function renderSync(host) {
+    host.appendChild(sectionTitle('Sync status'));
+    var counts = el('div', { class: 'agents' }, [
+      syncTile('Leagues', state.leagues.length, 'football'),
+      syncTile('Teams', state.teams.length, 'users'),
+      syncTile('Players', Object.keys(state.players).length, 'list'),
+      syncTile('Projections', Object.keys(state.proj).length, 'trend')
+    ]);
+    host.appendChild(counts);
+    var dl = el('dl', { class: 'kv' });
+    [
+      ['Connection', state.dbReady === true ? 'Live · realtime subscriptions active' : state.dbReady === null ? 'Connecting' : 'Unavailable'],
+      ['Last refreshed', relTime(state.syncedAt || state.meta.lastRefreshedAt)],
+      ['Season', state.meta.season || '—'],
+      ['Current week', state.meta.currentWeek !== undefined ? String(state.meta.currentWeek) : '—'],
+      ['Roster slots', String(state.slots.length)],
+      ['Rankings', String(state.rankings.length)]
+    ].forEach(function (pair) {
+      dl.appendChild(el('dt', { text: pair[0] }));
+      dl.appendChild(el('dd', { text: pair[1] }));
     });
-
-    panel.appendChild(el('div', { class: 'table-wrap' }, [
-      el('table', {}, [
-        el('thead', {}, [el('tr', {}, [
-          el('th', { text: 'Player' }), el('th', { text: 'Pos' }), el('th', { text: 'Team' }),
-          el('th', { text: 'Proj. Pts' }), el('th', { text: 'Status' }),
-        ])]),
-        tbody,
-      ]),
-    ]));
-  }
-
-  function positionSelect(current, onChange) {
-    var sel = el('select', { onchange: function (e) { onChange(e.target.value); } });
-    ['ALL'].concat(POSITIONS).forEach(function (pos) {
-      var opt = document.createElement('option');
-      opt.value = pos; opt.textContent = pos === 'ALL' ? 'All positions' : pos;
-      if (pos === current) opt.selected = true;
-      sel.appendChild(opt);
-    });
-    return sel;
-  }
-
-  function renderRankings() {
-    var panel = document.getElementById('panel');
-    panel.innerHTML = '';
-
-    panel.appendChild(el('div', { class: 'note', text: 'Demo model ranking, derived from this dataset’s own scoring — not a real expert-consensus feed. Connect FantasyPros to replace this.' }));
-    panel.appendChild(el('div', { class: 'filter-row' }, [
-      el('label', { text: 'Position' }),
-      positionSelect(state.rankPosFilter, function (val) { state.rankPosFilter = val; renderRankings(); }),
-    ]));
-
-    var rows = state.rankPosFilter === 'ALL' ? state.rankings : state.rankings.filter(function (r) { return r.position === state.rankPosFilter; });
-    rows = rows.slice().sort(function (a, b) { return a.rank - b.rank; });
-
-    if (rows.length === 0) {
-      panel.appendChild(el('div', { class: 'empty-state', text: 'No rankings available yet.' }));
-      return;
-    }
-
-    var tbody = el('tbody');
-    rows.forEach(function (r) {
-      var player = state.players[r.playerId];
-      tbody.appendChild(el('tr', {}, [
-        el('td', { class: 'rank tabular', text: '#' + r.rank }),
-        el('td', { text: player ? player.fullName : r.playerId }),
-        el('td', {}, [el('span', { class: 'chip pos', text: r.position })]),
-        el('td', { class: 'tabular', text: player ? (player.nflTeam || 'FA') : '' }),
-        el('td', { class: 'tabular', text: r.tier != null ? 'Tier ' + r.tier : '—' }),
+    var card = el('div', { class: 'card pad' }, [
+      el('h2', { style: 'font-size:16px;margin-bottom:14px', text: 'Pipeline' }),
+      dl
+    ]);
+    if (state.meta.demoMode) {
+      card.appendChild(el('div', { class: 'leader', style: 'margin-top:18px' }, [
+        el('div', { class: 'micro', text: 'Demo data' }),
+        el('p', { class: 'note', style: 'margin:8px 0 0;color:var(--ink-2)', text: state.meta.demoNote || 'Sample data is loaded. Connect a real league to replace it.' })
       ]));
+    }
+    host.appendChild(card);
+  }
+
+  function syncTile(label, value, ico) {
+    return el('div', { class: 'card agent' }, [
+      el('span', { class: 'ico', html: icon(ico) }),
+      el('div', { class: 'aname num', text: String(value) }),
+      el('div', { class: 'asub', text: label })
+    ]);
+  }
+
+  // ---------- starfield ----------
+  function drawSky() {
+    var c = document.getElementById('sky');
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var w = window.innerWidth, h = window.innerHeight;
+    c.width = w * dpr; c.height = h * dpr;
+    c.style.width = w + 'px'; c.style.height = h + 'px';
+    var ctx = c.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    var haze = ctx.createRadialGradient(w * 0.78, h * 0.12, 0, w * 0.78, h * 0.12, Math.max(w, h) * 0.6);
+    haze.addColorStop(0, 'rgba(30,80,140,.22)');
+    haze.addColorStop(1, 'rgba(7,11,17,0)');
+    ctx.fillStyle = haze;
+    ctx.fillRect(0, 0, w, h);
+    var seed = 7;
+    function rnd() { seed = (seed * 16807) % 2147483647; return seed / 2147483647; }
+    for (var i = 0; i < 150; i++) {
+      var x = rnd() * w, y = rnd() * h, r = rnd() * 1.1 + 0.25, a = rnd() * 0.55 + 0.12;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(205,230,255,' + a.toFixed(2) + ')';
+      ctx.fill();
+    }
+  }
+
+  // ---------- data ----------
+  var COLLECTIONS = ['leagues', 'teams', 'players', 'rosterSlots', 'projections', 'rankings'];
+
+  function absorb(name, docs) {
+    if (name === 'leagues') {
+      state.leagues = docs.map(function (d) { return d.data(); })
+        .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+      if (!state.leagueId && state.leagues.length) state.leagueId = state.leagues[0].id;
+    } else if (name === 'teams') {
+      state.teams = docs.map(function (d) { return d.data(); });
+    } else if (name === 'players') {
+      var map = {};
+      docs.forEach(function (d) { map[d.id] = d.data(); });
+      state.players = map;
+    } else if (name === 'rosterSlots') {
+      state.slots = docs.map(function (d) { return d.data(); });
+    } else if (name === 'projections') {
+      var proj = {};
+      docs.forEach(function (d) {
+        var p = d.data();
+        proj[p.leagueId + '|' + p.playerId] = p.projectedPoints;
+      });
+      state.proj = proj;
+    } else if (name === 'rankings') {
+      state.rankings = docs.map(function (d) { return d.data(); });
+    }
+  }
+
+  function subscribe() {
+    COLLECTIONS.forEach(function (name) {
+      db.collection(name).onSnapshot(function (snap) {
+        absorb(name, snap.docs);
+        paintAll();
+      }, function () { /* subscription ended; live view keeps last data */ });
     });
-
-    panel.appendChild(el('div', { class: 'table-wrap' }, [
-      el('table', {}, [
-        el('thead', {}, [el('tr', {}, [
-          el('th', { text: 'Rank' }), el('th', { text: 'Player' }), el('th', { text: 'Pos' }),
-          el('th', { text: 'Team' }), el('th', { text: 'Tier' }),
-        ])]),
-        tbody,
-      ]),
-    ]));
+    db.doc('meta/status').onSnapshot(function (snap) {
+      state.meta = snap.exists ? snap.data() : {};
+      paintAll();
+    }, function () {});
   }
 
-  function renderPanel() {
-    if (state.activeTab === 'rosters') renderRosters();
-    else if (state.activeTab === 'waivers') renderWaivers();
-    else renderRankings();
+  function refresh() {
+    var btn = document.getElementById('refresh');
+    if (!db || state.syncing) return;
+    state.syncing = true;
+    btn.disabled = true;
+    btn.textContent = 'Refreshing…';
+    var reads = COLLECTIONS.map(function (name) {
+      return db.collection(name).get().then(function (snap) { absorb(name, snap.docs); });
+    });
+    reads.push(db.doc('meta/status').get().then(function (snap) { state.meta = snap.exists ? snap.data() : {}; }));
+    Promise.all(reads).then(function () {
+      state.syncedAt = new Date().toISOString();
+    }).catch(function () {}).then(function () {
+      state.syncing = false;
+      btn.disabled = false;
+      btn.textContent = 'Refresh';
+      paintAll();
+    });
   }
 
-  function renderAll() {
-    renderRefreshStatus();
-    renderDemoBanner();
-    renderLeagueRail();
-    renderLeagueSummary();
-    renderPanel();
-  }
-
-  document.getElementById('tabs').addEventListener('click', function (e) {
-    var btn = e.target.closest('.tab');
-    if (!btn) return;
-    state.activeTab = btn.getAttribute('data-tab');
-    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) { t.classList.toggle('active', t === btn); });
-    renderPanel();
+  // ---------- boot ----------
+  document.getElementById('searchIcon').innerHTML = icon('search', 16);
+  var input = document.getElementById('search');
+  input.addEventListener('input', function (e) { state.query = e.target.value; paintView(); });
+  input.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') { input.value = ''; state.query = ''; paintView(); input.blur(); }
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); input.focus(); input.select(); }
+  });
+  document.getElementById('refresh').addEventListener('click', refresh);
+  document.addEventListener('click', function (e) {
+    if (state.menuOpen && !e.target.closest('#picker')) { state.menuOpen = false; paintPicker(); }
   });
 
-  function selectLeague(id) {
-    if (id === state.selectedLeagueId) return;
-    state.selectedLeagueId = id;
-    subscribeLeagueScoped(window.__db);
-    renderAll();
-  }
+  drawSky();
+  var resizeTimer;
+  window.addEventListener('resize', function () {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(drawSky, 180);
+  });
 
-  function subscribeLeagueScoped(db) {
-    leagueScopedUnsubs.forEach(function (u) { u(); });
-    leagueScopedUnsubs = [];
-    if (!db || !state.selectedLeagueId) return;
+  paintAll();
+  setInterval(paintStatus, 30000);
 
-    var leagueId = state.selectedLeagueId;
-    leagueScopedUnsubs.push(
-      db.collection('teams').where('leagueId', '==', leagueId).onSnapshot(function (snap) {
-        state.teams = state.teams.filter(function (t) { return t.leagueId !== leagueId; })
-          .concat(snap.docs.map(function (d) { return d.data(); }));
-        renderAll();
-      }, function () {})
-    );
-    leagueScopedUnsubs.push(
-      db.collection('rosterSlots').where('leagueId', '==', leagueId).onSnapshot(function (snap) {
-        state.rosterSlots = state.rosterSlots.filter(function (s) { return s.leagueId !== leagueId; })
-          .concat(snap.docs.map(function (d) { return d.data(); }));
-        renderAll();
-      }, function () {})
-    );
-    leagueScopedUnsubs.push(
-      db.collection('projections').where('leagueId', '==', leagueId).onSnapshot(function (snap) {
-        snap.docs.forEach(function (d) {
-          var p = d.data();
-          state.projections[leagueId + '::' + p.playerId] = p;
-        });
-        renderAll();
-      }, function () {})
-    );
-  }
-
-  function boot() {
-    if (!window.claude || !window.claude.use) {
-      state.dbAvailable = false;
-      renderAll();
-      return;
-    }
-    window.claude.use('db').then(function (db) {
-      window.__db = db;
-      state.dbAvailable = !!db;
-      if (!db) { renderAll(); return; }
-
-      db.collection('leagues').onSnapshot(function (snap) {
-        state.leagues = snap.docs.map(function (d) { return d.data(); });
-        if (!state.selectedLeagueId && state.leagues.length) {
-          state.selectedLeagueId = state.leagues[0].id;
-          subscribeLeagueScoped(db);
-        }
-        renderAll();
-      }, function () { state.dbAvailable = false; renderAll(); });
-
-      db.collection('players').onSnapshot(function (snap) {
-        var map = {};
-        snap.docs.forEach(function (d) { map[d.id] = d.data(); });
-        state.players = map;
-        renderAll();
-      }, function () {});
-
-      db.collection('rankings').onSnapshot(function (snap) {
-        state.rankings = snap.docs.map(function (d) { return d.data(); });
-        renderAll();
-      }, function () {});
-
-      db.doc('meta/status').onSnapshot(function (snap) {
-        state.meta = snap.exists ? snap.data() : {};
-        renderAll();
-      }, function () {});
+  if (window.claude && window.claude.use) {
+    window.claude.use('db').then(function (handle) {
+      db = handle;
+      state.dbReady = !!handle;
+      if (handle) subscribe();
+      paintAll();
     });
+  } else {
+    state.dbReady = false;
+    paintAll();
   }
-
-  renderAll();
-  boot();
-  setInterval(renderRefreshStatus, 30000);
 })();
 </script>

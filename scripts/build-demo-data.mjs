@@ -29,6 +29,9 @@ function mulberry32(seed) {
   };
 }
 const rand = mulberry32(42);
+// Separate stream for free-agent scoring history so adding it never shifts the
+// main sequence — rosters, records and rankings stay byte-identical.
+const randFA = mulberry32(99);
 const pick = (arr) => arr[Math.floor(rand() * arr.length)];
 const shuffled = (arr) => arr.map((v) => [rand(), v]).sort((a, b) => a[0] - b[0]).map(([, v]) => v);
 
@@ -135,9 +138,21 @@ function buildDemoLeague({ externalId, name, season, scoringType, teamCount, pla
     }
   }
 
-  const rosteredPlayers = players.filter((p) => rosteredIds.has(p.id));
+  // Unrostered players need history too — a real Sleeper pipeline has scoring
+  // for anyone who played, and the waiver wire is useless without projections.
+  // They skew lower, which is roughly why they went undrafted.
+  for (const player of players) {
+    if (weeklyPointsByPlayer[player.id]) continue;
+    const base = (basePointsByPosition[player.position] ?? 8) * (0.5 + randFA() * 0.4);
+    weeklyPointsByPlayer[player.id] = {};
+    for (let w = 1; w < currentWeek; w++) {
+      const noise = (randFA() - 0.5) * base * 0.9;
+      weeklyPointsByPlayer[player.id][w] = Math.max(0, Math.round((base + noise) * 10) / 10);
+    }
+  }
+
   const projections = computeProjections({
-    players: rosteredPlayers,
+    players,
     weeklyPointsByPlayer,
     leagueId: id,
     season,
