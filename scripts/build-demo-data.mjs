@@ -69,6 +69,32 @@ const PLAYER_POOL = [
   ['TE', 'Cole Kmet', 'CHI'], ['TE', 'Pat Freiermuth', 'PIT'],
   ['K', 'Younghoe Koo', 'ATL'], ['K', 'Tyler Bass', 'BUF'], ['K', 'Chris Boswell', 'PIT'],
   ['DEF', 'New York Jets', 'NYJ'], ['DEF', 'Pittsburgh Steelers', 'PIT'], ['DEF', 'Cleveland Browns', 'CLE'],
+  // enough depth that full 14-man rosters still leave a real waiver wire
+  ['QB', 'Jordan Love', 'GB'], ['QB', 'Tua Tagovailoa', 'MIA'], ['QB', 'Jared Goff', 'DET'],
+  ['QB', 'Brock Purdy', 'SF'], ['QB', 'Bo Nix', 'DEN'], ['QB', 'Caleb Williams', 'CHI'],
+  ['QB', 'Sam Darnold', 'MIN'], ['QB', 'Anthony Richardson', 'IND'],
+  ['RB', 'Travis Etienne', 'JAX'], ['RB', 'David Montgomery', 'DET'], ['RB', 'Aaron Jones', 'MIN'],
+  ['RB', 'Joe Mixon', 'HOU'], ['RB', 'Najee Harris', 'PIT'], ['RB', 'Kyren Williams', 'LAR'],
+  ["RB", "D'Andre Swift", 'CHI'], ['RB', 'Brian Robinson Jr.', 'WAS'], ['RB', 'Nick Chubb', 'CLE'],
+  ['RB', 'Austin Ekeler', 'WAS'], ['RB', 'James Conner', 'ARI'], ['RB', 'Zach Charbonnet', 'SEA'],
+  ['RB', 'Jerome Ford', 'CLE'], ['RB', 'Tank Bigsby', 'JAX'], ['RB', 'Ty Chandler', 'MIN'],
+  ['RB', 'Bucky Irving', 'TB'], ['RB', 'Blake Corum', 'LAR'], ['RB', 'Trey Benson', 'ARI'],
+  ['RB', 'Ray Davis', 'BUF'], ['RB', 'Braelon Allen', 'NYJ'], ['RB', 'Jaleel McLaughlin', 'DEN'],
+  ['WR', 'Amari Cooper', 'BUF'], ['WR', 'Stefon Diggs', 'HOU'], ['WR', 'Deebo Samuel', 'SF'],
+  ['WR', 'Brandon Aiyuk', 'SF'], ['WR', 'George Pickens', 'PIT'], ['WR', 'Zay Flowers', 'BAL'],
+  ['WR', 'Michael Pittman Jr.', 'IND'], ['WR', 'Keenan Allen', 'CHI'], ['WR', 'DJ Moore', 'CHI'],
+  ['WR', 'Tyler Lockett', 'SEA'], ['WR', 'Chris Godwin', 'TB'], ['WR', 'Jakobi Meyers', 'LV'],
+  ['WR', 'Khalil Shakir', 'BUF'], ['WR', 'Josh Downs', 'IND'], ["WR", "Wan'Dale Robinson", 'NYG'],
+  ['WR', 'Darnell Mooney', 'ATL'], ['WR', 'Romeo Doubs', 'GB'], ['WR', 'Jayden Reed', 'GB'],
+  ['WR', 'Xavier Worthy', 'KC'], ['WR', 'Ladd McConkey', 'LAC'], ['WR', 'Brian Thomas Jr.', 'JAX'],
+  ['WR', 'Keon Coleman', 'BUF'], ['WR', 'Adam Thielen', 'CAR'], ['WR', 'Tyler Boyd', 'TEN'],
+  ['TE', 'Kyle Pitts', 'ATL'], ['TE', 'Dallas Goedert', 'PHI'], ['TE', 'Tucker Kraft', 'GB'],
+  ['TE', 'Isaiah Likely', 'BAL'], ['TE', 'Hunter Henry', 'NE'], ['TE', 'Tyler Conklin', 'NYJ'],
+  ['TE', 'Noah Fant', 'SEA'], ['TE', 'Juwan Johnson', 'NO'], ['TE', 'Zach Ertz', 'WAS'],
+  ['K', 'Cameron Dicker', 'LAC'], ['K', 'Jake Elliott', 'PHI'], ["K", "Ka'imi Fairbairn", 'HOU'],
+  ['K', 'Jason Sanders', 'MIA'],
+  ['DEF', 'Philadelphia Eagles', 'PHI'], ['DEF', 'Denver Broncos', 'DEN'],
+  ['DEF', 'Houston Texans', 'HOU'], ['DEF', 'Green Bay Packers', 'GB'],
 ];
 
 let nextPlayerId = 1000;
@@ -86,6 +112,8 @@ const playersById = Object.fromEntries(players.map((p) => [p.id, p]));
 
 const OWNER_NAMES = ['Alex', 'Jordan', 'Sam', 'Taylor', 'Morgan', 'Casey', 'Riley', 'Jamie', 'Drew', 'Quinn', 'Reese', 'Avery'];
 const ROSTER_POSITIONS = ['QB', 'RB', 'RB', 'WR', 'WR', 'TE', 'FLEX', 'DEF', 'K', 'BN', 'BN', 'BN', 'BN', 'BN'];
+const ROSTER_SIZE = ROSTER_POSITIONS.length;
+const STARTER_COUNT = ROSTER_POSITIONS.filter((slot) => slot !== 'BN').length;
 
 function buildDemoLeague({ externalId, name, season, scoringType, teamCount, playerSubset, currentWeek }) {
   const id = makeLeagueId('sleeper', externalId);
@@ -94,31 +122,61 @@ function buildDemoLeague({ externalId, name, season, scoringType, teamCount, pla
     totalRosters: teamCount, rosterPositions: ROSTER_POSITIONS, status: 'in_season',
   };
 
-  const pool = shuffled(playerSubset);
-  const rosterSize = 9; // 1 QB, 2 RB, 2 WR, 1 TE, 1 FLEX(RB/WR), 1 DEF, 1 K -> keep simple: 9 starters+bench, rest go to waivers
   const teams = [];
   const rosterSlots = [];
-  let cursor = 0;
 
   for (let t = 1; t <= teamCount; t++) {
     const owner = OWNER_NAMES[(t - 1) % OWNER_NAMES.length];
-    const tId = makeTeamId(id, String(t));
     const wins = Math.floor(rand() * 6);
     const losses = Math.floor(rand() * (7 - wins));
     teams.push({
-      id: tId, leagueId: id, externalId: String(t),
+      id: makeTeamId(id, String(t)), leagueId: id, externalId: String(t),
       ownerName: owner, teamName: `${owner}'s Team`,
       wins, losses, ties: 0,
       pointsFor: Math.round((800 + rand() * 400) * 10) / 10,
       pointsAgainst: Math.round((800 + rand() * 400) * 10) / 10,
     });
+  }
 
-    const teamPlayers = pool.slice(cursor, cursor + rosterSize);
-    cursor += rosterSize;
-    teamPlayers.forEach((p, i) => {
+  // Snake draft with position caps. Filling rosters by slicing a shuffled list
+  // produced teams with no bench and sometimes no quarterback, which left every
+  // roster with zero surplus — and a trade engine needs surplus to work with.
+  const MIN_BY_POSITION = { QB: 1, RB: 2, WR: 2, TE: 1, K: 1, DEF: 1 };
+  const MAX_BY_POSITION = { QB: 2, RB: 5, WR: 6, TE: 2, K: 1, DEF: 1 };
+  const board = shuffled(playerSubset);
+  const drafted = new Set();
+  const byTeam = new Map(teams.map((team) => [team.id, []]));
+
+  for (let round = 0; round < ROSTER_SIZE; round++) {
+    const order = round % 2 === 0 ? teams : teams.slice().reverse();
+    for (const team of order) {
+      const roster = byTeam.get(team.id);
+      const counts = {};
+      roster.forEach((p) => { counts[p.position] = (counts[p.position] || 0) + 1; });
+      const slotsLeft = ROSTER_SIZE - roster.length;
+
+      // Anything still below its minimum that we no longer have room to defer.
+      const urgent = Object.keys(MIN_BY_POSITION).filter((pos) => (counts[pos] || 0) < MIN_BY_POSITION[pos]);
+      const mustFillNow = urgent.filter(() => true).length >= slotsLeft ? urgent : null;
+
+      const pick = board.find((p) => {
+        if (drafted.has(p.id)) return false;
+        if ((counts[p.position] || 0) >= MAX_BY_POSITION[p.position]) return false;
+        if (mustFillNow && !mustFillNow.includes(p.position)) return false;
+        return true;
+      }) || board.find((p) => !drafted.has(p.id) && (counts[p.position] || 0) < MAX_BY_POSITION[p.position]);
+
+      if (!pick) continue;
+      drafted.add(pick.id);
+      roster.push(pick);
+    }
+  }
+
+  for (const team of teams) {
+    byTeam.get(team.id).forEach((p, i) => {
       rosterSlots.push({
-        leagueId: id, teamId: tId, playerId: p.id,
-        slot: i < 5 ? ROSTER_SLOT.STARTER : ROSTER_SLOT.BENCH,
+        leagueId: id, teamId: team.id, playerId: p.id,
+        slot: i < STARTER_COUNT ? ROSTER_SLOT.STARTER : ROSTER_SLOT.BENCH,
       });
     });
   }
