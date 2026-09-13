@@ -8,12 +8,16 @@
   :root {
     color-scheme: dark;
 
-    --bg:        #0E1116;
-    --raise:     #161B22;
-    --raise-2:   #1C232C;
-    --sunk:      #0A0D11;
-    --line:      #232C37;
-    --line-soft: #1A222B;
+    /* The ground is near-black and panels sit clearly above it. An earlier
+       pass had only five points of lightness between the two, which read as
+       one flat surface — the panels have to be legible as separate objects,
+       not merely present. */
+    --bg:        #07090D;
+    --raise:     #1A212C;
+    --raise-2:   #263041;
+    --sunk:      #0E131A;
+    --line:      #313D4E;
+    --line-soft: #26303E;
 
     --ink:       #F2F5F8;
     --ink-2:     #9AA7B6;
@@ -1778,6 +1782,11 @@ function myTeamIn(teams, sleeperUserId) {
   const el = (tag, attrs, ...kids) => {
     const node = document.createElement(tag);
     for (const [k, v] of Object.entries(attrs || {})) {
+      // ARIA attributes take the literal strings "true"/"false" — they are not
+      // HTML boolean attributes. Writing `true` as an empty value (correct for
+      // `disabled` and `open`) makes [aria-selected="true"] silently never
+      // match, which is how the league tabs lost their selected state.
+      if (k.startsWith("aria-") && typeof v === "boolean") { node.setAttribute(k, String(v)); continue; }
       if (v === null || v === undefined || v === false) continue;
       if (k === "class") node.className = v;
       else if (k === "text") node.textContent = v;

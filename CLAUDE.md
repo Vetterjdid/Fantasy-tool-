@@ -1,60 +1,80 @@
 # Fantasy tool — project state
 
 Multi-league fantasy football analysis, delivered as a live Claude Artifact.
-Read `docs/PLAN.md` for the full design and the phase breakdown.
+`docs/PLAN.md` holds the original design; where this file disagrees with it,
+this file is current.
 
 ## Where things stand
 
 | Phase | What | Status |
 |---|---|---|
-| 1 | Analysis engine (`src/analysis/`) | **Done** — 55 tests pass |
-| 2 | Sleeper username → league discovery → identity | Not started, and **deliberately deferred** (see Blocker) |
-| 3 | Build step: bundle `src/analysis/*` into the artifact | Not started |
-| 4 | Three views: My Team, League, Trade Finder | Not started |
-| 5 | Real Sleeper data | Blocked |
+| 1 | Analysis engine (`src/analysis/`) | **Done** |
+| 2 | Sleeper username → league discovery → identity | **Done**, verified against live responses |
+| 3 | Build step bundling `src/analysis/*` into the artifact | **Done** (`scripts/build-artifact.mjs`) |
+| 4 | Views: My Team, League, Trade Finder, Saved | **Done** |
+| 5 | Real Sleeper data | **Done** — running on three live leagues |
 
-Branch: `claude/live-artifact-tool-um585n`. Run `npm test` before trusting anything.
+71 tests pass. Branch: `claude/live-artifact-tool-um585n`. Run `npm test` before
+trusting anything.
+
+Not done: refresh is manual. `npm run fetch:live <username>` re-pulls the data,
+then `node scripts/build-artifact.mjs` and a republish. Automating that on a
+schedule is the obvious next piece of work.
 
 ## The published artifact — do not orphan it
 
 **https://claude.ai/code/artifact/8bfc07fb-3b2b-41ce-a569-2a8e1ccbe63c** ("War Room", 🏈)
 
-It holds a seeded database of ~447 documents. **Always republish by passing that
-`url:` explicitly.** Publishing without it creates a *new* artifact whose database
-starts empty, and the seeded data is not attached to it.
+**Always republish by passing that `url:` explicitly.** Publishing without it
+creates a *separate* artifact, leaving the real one stale and stranding the
+saved/dismissed trades in its database.
 
-## Blocker: `api.sleeper.app` is unreachable
+## How data gets in
 
-The environment's network policy denies it — `curl` gets `CONNECT tunnel failed,
-response 403`. This is not a timeout, a rate limit, or something to retry or route
-around; it needs the cloud environment's **Network access** changed from `Trusted`
-to `Custom` with `api.sleeper.app` allowed (plus the "include default package
-managers" box ticked, or npm and GitHub break). Only the account owner can do that.
+The artifact sandbox blocks `fetch`, XHR and WebSocket to **every** host, so the
+page cannot call Sleeper or anything else. Data is therefore baked into the page
+at build time:
 
-Consequences a fresh session should not "fix":
+1. `npm run fetch:live <sleeper-username>` → `data/live.json` (gitignored).
+   Needs `--use-env-proxy`, already in the npm script — Node's `fetch` ignores
+   the proxy env that `curl` reads, and gets a bare 403 without it.
+2. `node scripts/build-artifact.mjs` inlines `src/analysis/*` plus that snapshot
+   into `build/dashboard.html`.
+3. Republish to the URL above.
 
-- `src/integrations/sleeper.js` is written against the documented API shape but
-  **has never seen a live response**. Anything marked unverified genuinely is.
-- The dashboard runs on generated demo data (`scripts/build-demo-data.mjs`,
-  deterministic). That is a stand-in, not a fixture to build behaviour around.
-- Phase 2 is skipped on purpose: writing network code that cannot be run once is
-  how you get bugs that surface only when you need them not to.
+The bundle is a flat concatenation sharing one scope, so **two modules may not
+declare the same top-level name**. The build fails loudly on a collision rather
+than shipping a page that dies whole in the browser.
+
+Only the artifact `db` is live at runtime: it stores each league's saved and
+dismissed trades under `tradeboard/<leagueId>`, mirrored to `localStorage`.
+
+## Projections: prior-season production, not a forecast
+
+The season is week 1, so there is no current-season scoring to average and
+`src/projections/customModel.js` cannot run. `src/projections/baseline.js` uses
+2025 per-game production from nflverse (open data, published for programmatic
+use) as the opening prior. It knows nothing about team changes, depth charts or
+camp injuries. Swap it back to the rolling-average model once enough weeks exist.
+
+Joining Sleeper to nflverse needs care, and the obvious approach fails quietly:
+Sleeper's own `gsis_id` covers about a fifth of a real roster, is missing for
+players as prominent as CeeDee Lamb, and arrives on some records with a **leading
+space**. Going through nflverse's player table by normalized name lifts coverage
+to ~87%, where nearly all the remainder is rookies who correctly have no line.
 
 ## Constraints that are not negotiable
 
-- **No passwords.** Sleeper's public API is unauthenticated and has no login
-  endpoint. A username is a public handle, not a credential. Never build a
-  password field for a third-party service. If ESPN cookies or Yahoo OAuth land
-  later, those secrets stay server-side and **never** enter the artifact `db`,
-  which every viewer of the artifact can read.
-- **No scraping** sites whose terms disallow programmatic access. Stated by the
-  user in the original spec.
-- **Artifacts cannot make network requests.** The sandbox CSP blocks `fetch`,
-  XHR and WebSocket to every host. This is *the* architectural constraint: the
-  page cannot call Sleeper itself. A session or routine fetches, writes to the
-  artifact `db`, and the page reads from there. Scripts load only from cdnjs,
-  jsdelivr, the Tailwind play CDN and code.jquery.com; stylesheets only from
-  fonts.googleapis.com.
+- **No passwords.** Sleeper's API is unauthenticated and has no login endpoint.
+  A username is a public handle. Never build a password field for a third-party
+  service. Future ESPN cookies or Yahoo OAuth stay server-side and **never**
+  enter the artifact `db`. The `/user` response carries null `email`, `phone`,
+  `token` and `cookies` keys — `loadAllLeagues` picks three fields by hand for
+  exactly this reason; do not widen it to spread the whole object.
+- **No scraping** sites whose terms disallow programmatic access, and no
+  undocumented Sleeper endpoints (their internal projections routes included).
+- **Sleeper needs an allowlist entry.** The cloud environment's Network access
+  is `Custom` with `api.sleeper.app`. If it 403s again, that setting was changed.
 
 ## The engine's core thesis
 
@@ -85,23 +105,46 @@ Corollaries worth keeping in mind before changing anything in `src/analysis/`:
   lineups jitter, and jitter manufactures phantom trades.
 - A projection row on a bye carries `projectedPoints: 0`. Used raw, every star on
   bye reads as worthless and the engine screams "sell". Bye values are imputed
-  from the nearest-ranked healthy peer at the same position.
-- A missing projection is `null`, never `0`.
+  from the nearest-ranked healthy peer at the same position. `baseline.js` hard-codes
+  `bye: false` because week 1 has none — extending it past week 1 **must** consult
+  the schedule.
+- A missing projection is `null`, never `0`. Rookies rely on this.
 - Replacement level is the **median of the top few free agents** — not the single
   best (one lucky waiver player would erase a whole position's tradeable value)
   and never a rostered player (who cannot be had at any price).
+- **Shortfall means an empty lineup slot**, nothing else. Comparing starters
+  against demand looks right and is wrong: FLEX demand is fractional, so a team
+  starting exactly two RBs in a 2-RB-plus-FLEX league always measured 0.33
+  "short", and every team in every league read as short at two of three flex
+  positions.
 - Guard `SD === 0` before computing z-scores.
+
+## UI notes
+
+Sleeper's visual language: dark-only, and position colours carry identity
+(QB pink, RB teal, WR blue, TE orange, K purple, DEF grey). Keep those strictly
+apart from the diverging warm/cool pair, which means weak or strong. Player
+headshots cannot be used — the sandbox blocks external images — hence tinted
+initials.
+
+ARIA attributes need the literal strings `"true"`/`"false"`; the `el()` helper's
+boolean-attribute shorthand (correct for `disabled`, `open`) silently breaks
+`[aria-selected="true"]` selectors, which is how the league tabs once lost their
+selected state.
+
+Trade suggestions are ordered for variety, not filtered: best two per manager
+first, then the rest by rank. A hard per-manager cap looks reasonable and leaves
+only ~8 of 60, because just four to six managers in a league ever have a workable
+trade.
 
 ## Decisions already taken
 
 Horizon: rest of season. Suggestions: mutual gain only, ranked by my gain.
-Onboarding: Sleeper username, no league IDs. Identity: derived from
-`owner_id === user_id`, resolved per league — a user can own a different roster in
-each one. Views: My Team · League · Trade Finder, with waivers and rankings folded
-in as context rather than their own tabs.
+Onboarding: Sleeper username, no league IDs. Identity: `owner_id === user_id`,
+resolved per league — a user can own a different roster in each.
 
 ## Conventions
 
-Plain ESM, Node 18+, **zero dependencies**, `node:test` + `node:assert/strict`.
-`npm test` runs `node --test "test/**/*.test.js"` — this Node rejects a bare
-directory argument, so keep the glob.
+Plain ESM, Node 18+, **zero dependencies** in `src/`, `node:test` +
+`node:assert/strict`. `npm test` runs `node --test "test/**/*.test.js"` — this
+Node rejects a bare directory argument, so keep the glob.
