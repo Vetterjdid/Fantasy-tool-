@@ -34,7 +34,13 @@ const INELIGIBLE = 1e9;
  * thousands of times, so this inner test has to be a bit-and rather than an
  * array scan.
  */
-const POSITION_BIT = { QB: 1, RB: 2, WR: 4, TE: 8, K: 16, DEF: 32 };
+/**
+ * One bit per position, so eligibility is an integer AND rather than a set
+ * walk. Exported because the trade search gates candidate packages with the
+ * same masks: a second copy that drifted would let the search accept packages
+ * the lineup solver then refuses to start.
+ */
+export const POSITION_BIT = { QB: 1, RB: 2, WR: 4, TE: 8, K: 16, DEF: 32 };
 const SLOT_MASK = {};
 for (const slot of Object.keys(SLOT_ELIGIBILITY)) {
   SLOT_MASK[slot] = SLOT_ELIGIBILITY[slot].reduce((mask, p) => mask | (POSITION_BIT[p] || 0), 0);

@@ -10,14 +10,12 @@
  * refuse is not a suggestion, it is a daydream.
  */
 
-import { optimalLineup, lineupTotal } from './lineup.js';
+import { optimalLineup, lineupTotal, POSITION_BIT } from './lineup.js';
 import { marginalOut, marginalIn } from './value.js';
 import { lineupChanges, buildRationale } from './explain.js';
 
 /** Positions where replacement level sits on top of the starter — nobody trades these. */
 const UNTRADEABLE = ['K', 'DEF'];
-
-const POSITION_BIT = { QB: 1, RB: 2, WR: 4, TE: 8, K: 16, DEF: 32 };
 
 /**
  * Packages, each decorated with the metadata the inner loop needs.

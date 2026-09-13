@@ -1,0 +1,805 @@
+<title>War Room</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* ---- tokens: complete light palette on bare :root, redefined per theme ---- */
+  :root {
+    --ground:      #F2F4F8;
+    --surface:     #FFFFFF;
+    --surface-sunk:#E9EDF3;
+    --line:        #D3DAE4;
+    --line-soft:   #E5EAF1;
+    --ink:         #141A24;
+    --ink-2:       #47536580;
+    --muted:       #5D6B7F;
+    --faint:       #8A97A8;
+
+    /* The app's subject is polarity — above or below the league. The diverging
+       pair is the design system, not an accent chosen for looks. */
+    --cool:        #1B7F9C;   /* strength */
+    --warm:        #B4571F;   /* weakness */
+    --mid:         #8794A5;   /* the zero point */
+    --cool-ink:    #12657C;
+    --warm-ink:    #96460F;
+
+    --shadow: 0 1px 2px rgb(20 26 36 / .06), 0 8px 24px -12px rgb(20 26 36 / .18);
+
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display: "Archivo", var(--sans);
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #111722;
+      --surface:     #18202D;
+      --surface-sunk:#0D131C;
+      --line:        #2A3442;
+      --line-soft:   #212A37;
+      --ink:         #E9EEF6;
+      --ink-2:       #A8B6C980;
+      --muted:       #93A2B8;
+      --faint:       #6D7C91;
+      --cool:        #2E9CBC;
+      --warm:        #D4703C;
+      --mid:         #5C6878;
+      --cool-ink:    #5CBBD6;
+      --warm-ink:    #E8905F;
+      --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px -14px rgb(0 0 0 / .7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #111722;
+    --surface:     #18202D;
+    --surface-sunk:#0D131C;
+    --line:        #2A3442;
+    --line-soft:   #212A37;
+    --ink:         #E9EEF6;
+    --ink-2:       #A8B6C980;
+    --muted:       #93A2B8;
+    --faint:       #6D7C91;
+    --cool:        #2E9CBC;
+    --warm:        #D4703C;
+    --mid:         #5C6878;
+    --cool-ink:    #5CBBD6;
+    --warm-ink:    #E8905F;
+    --shadow: 0 1px 2px rgb(0 0 0 / .4), 0 10px 30px -14px rgb(0 0 0 / .7);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; padding-block: 0 64px; }
+  header .wrap { padding-block: 0; }
+
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; letter-spacing: -.015em; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .eyebrow {
+    font-family: var(--display); font-size: 11px; font-weight: 600;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--faint);
+  }
+
+  /* ---- masthead ---- */
+  header { border-bottom: 1px solid var(--line); background: var(--surface); }
+  .masthead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 18px; padding-block: 18px 14px; }
+  .masthead h1 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+  .masthead .who { color: var(--muted); font-size: 14px; }
+  .masthead .who b { color: var(--ink); font-weight: 600; }
+  .masthead .stamp { margin-left: auto; text-align: right; color: var(--faint); font-size: 12px; line-height: 1.35; }
+
+  /* league switcher: real tabs, because each league is a separate world */
+  .leagues { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: thin; }
+  .league-tab {
+    appearance: none; border: 0; background: none; cursor: pointer;
+    font-family: var(--display); font-size: 14px; font-weight: 600; color: var(--muted);
+    padding: 9px 14px; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .league-tab:hover { color: var(--ink); }
+  .league-tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--cool); }
+  .league-tab .rank { font-family: var(--mono); font-size: 11px; color: var(--faint); margin-left: 6px; }
+
+  .views { display: flex; gap: 4px; padding: 14px 0 0; }
+  .view-tab {
+    appearance: none; cursor: pointer; font-family: var(--sans); font-size: 13.5px; font-weight: 500;
+    color: var(--muted); background: transparent; border: 1px solid transparent;
+    border-radius: 7px; padding: 7px 13px;
+  }
+  .view-tab:hover { color: var(--ink); background: var(--surface-sunk); }
+  .view-tab[aria-selected="true"] { color: var(--ink); background: var(--surface-sunk); border-color: var(--line); }
+
+  /* ---- headline facts: three statements, not decorated tiles ---- */
+  .facts { display: flex; flex-wrap: wrap; gap: 10px 34px; padding: 22px 0 20px; border-bottom: 1px solid var(--line-soft); }
+  .fact .eyebrow { display: block; margin-bottom: 3px; }
+  .fact .v { font-family: var(--mono); font-size: 24px; font-weight: 500; letter-spacing: -.02em; }
+  .fact .v small { font-size: 13px; color: var(--faint); font-weight: 400; }
+
+  section.view[hidden] { display: none; }
+  .split { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr); gap: 36px; padding-top: 26px; align-items: start; }
+  @media (max-width: 820px) { .split { grid-template-columns: minmax(0, 1fr); gap: 30px; } }
+
+  .block + .block { margin-top: 28px; }
+  .block > h2 { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); margin-bottom: 10px; }
+  .note { color: var(--muted); font-size: 13px; margin: 6px 0 0; }
+
+  /* ---- stat sheet ---- */
+  .sheet { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .sheet th { text-align: left; font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .08em;
+              text-transform: uppercase; color: var(--faint); padding: 0 8px 7px; border-bottom: 1px solid var(--line); }
+  .sheet td { padding: 7px 8px; border-bottom: 1px solid var(--line-soft); vertical-align: baseline; }
+  .sheet tr:last-child td { border-bottom: 0; }
+  .sheet .slot { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .07em; color: var(--muted); width: 62px; }
+  .sheet .pts { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .sheet .who-cell { font-weight: 500; }
+  .sheet .meta { color: var(--faint); font-size: 12px; font-family: var(--mono); }
+  .sheet tr.empty .who-cell { color: var(--warm-ink); font-style: italic; }
+  .sheet tr.bench td { color: var(--muted); }
+
+  .chip {
+    display: inline-block; font-family: var(--display); font-size: 10px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; padding: 1.5px 5px; border-radius: 3px;
+    border: 1px solid var(--line); color: var(--muted); vertical-align: 1px;
+  }
+  .chip.hurt { color: var(--warm-ink); border-color: color-mix(in oklab, var(--warm) 45%, transparent); }
+  .chip.guess { color: var(--faint); }
+  .chip.starts { color: var(--cool-ink); border-color: color-mix(in oklab, var(--cool) 45%, transparent); }
+
+  /* ---- diverging strength bars ---- */
+  .bars { display: grid; gap: 9px; }
+  .bar-row { display: grid; grid-template-columns: 34px 1fr 52px; align-items: center; gap: 10px; }
+  .bar-row .pos { font-family: var(--display); font-size: 12px; font-weight: 700; letter-spacing: .06em; }
+  .track { position: relative; height: 18px; background: var(--surface-sunk); border-radius: 3px; }
+  .track::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1px; background: var(--line); }
+  .track i { position: absolute; top: 3px; bottom: 3px; border-radius: 2px; display: block; }
+  .bar-row .z { font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums; text-align: right; }
+
+  .ranked { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+  .ranked li { display: flex; align-items: baseline; gap: 9px; font-size: 14px; }
+  .ranked .pos { font-family: var(--display); font-weight: 700; font-size: 12px; letter-spacing: .06em; width: 30px; }
+  .ranked .why { color: var(--muted); font-size: 13px; }
+
+  /* ---- heatmap ---- */
+  .heat-scroll { overflow-x: auto; }
+  .heat { border-collapse: separate; border-spacing: 2px; font-size: 13px; min-width: 560px; }
+  .heat th { font-family: var(--display); font-size: 11px; font-weight: 600; letter-spacing: .08em;
+             text-transform: uppercase; color: var(--faint); padding: 0 6px 6px; text-align: center; }
+  .heat th.team-h { text-align: left; }
+  .heat td.team { font-weight: 500; white-space: nowrap; padding-right: 12px; max-width: 190px;
+                  overflow: hidden; text-overflow: ellipsis; }
+  .heat td.team.me { font-weight: 700; }
+  .heat td.team.me::before { content: ""; display: inline-block; width: 3px; height: 13px; background: var(--cool);
+                             margin-right: 7px; vertical-align: -2px; border-radius: 2px; }
+  .heat .cell {
+    width: 62px; text-align: center; font-family: var(--mono); font-size: 12.5px; font-variant-numeric: tabular-nums;
+    padding: 7px 4px; border-radius: 4px; cursor: default; color: var(--ink);
+  }
+  .heat .cell.hole { outline: 1.5px solid var(--warm); outline-offset: -1.5px; font-weight: 600; }
+  .heat .total { width: 140px; padding-left: 10px; }
+  .heat .total .tbar { height: 8px; background: var(--surface-sunk); border-radius: 2px; position: relative; }
+  .heat .total .tbar i { position: absolute; inset: 0 auto 0 0; background: var(--mid); border-radius: 2px; }
+  .heat .total .tbar i.me { background: var(--cool); }
+  .heat .total span { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+
+  .scale { display: flex; align-items: center; gap: 9px; margin-top: 14px; font-size: 12px; color: var(--muted); }
+  .scale .ramp { display: flex; height: 10px; border-radius: 2px; overflow: hidden; width: 190px; }
+  .scale .ramp i { flex: 1; }
+
+  /* ---- trade finder ---- */
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 20px 0 6px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button {
+    appearance: none; border: 0; background: var(--surface); color: var(--muted); cursor: pointer;
+    font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 8px 14px;
+  }
+  .seg button + button { border-left: 1px solid var(--line); }
+  .seg button[aria-pressed="true"] { background: var(--surface-sunk); color: var(--ink); font-weight: 600; }
+  select {
+    font-family: var(--sans); font-size: 13px; color: var(--ink); background: var(--surface);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-width: 100%;
+  }
+
+  .offer { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); margin-top: 12px; box-shadow: var(--shadow); }
+  .offer > summary { list-style: none; cursor: pointer; padding: 14px 16px; display: grid;
+                     grid-template-columns: minmax(0, 1fr) auto; gap: 8px 18px; align-items: center; }
+  .offer > summary::-webkit-details-marker { display: none; }
+  .offer > summary:hover { background: color-mix(in oklab, var(--cool) 5%, transparent); border-radius: 9px; }
+  .offer[open] > summary { border-bottom: 1px solid var(--line-soft); border-radius: 9px 9px 0 0; }
+  .offer .partner { font-family: var(--display); font-weight: 600; font-size: 15px; }
+  .offer .partner span { color: var(--faint); font-weight: 500; font-size: 13px; font-family: var(--sans); }
+  .offer .swap { margin-top: 3px; font-size: 13.5px; display: flex; flex-wrap: wrap; gap: 0 7px; align-items: baseline; }
+  .offer .swap .out { color: var(--muted); }
+  .offer .swap .in { color: var(--ink); font-weight: 500; }
+  .offer .swap .arrow { color: var(--faint); font-family: var(--mono); }
+  .gains { display: flex; gap: 16px; align-items: baseline; white-space: nowrap; }
+  .gains .g { text-align: right; }
+  .gains .g b { font-family: var(--mono); font-size: 19px; font-weight: 600; letter-spacing: -.02em; display: block; }
+  .gains .mine b { color: var(--cool-ink); }
+  .gains .g .eyebrow { font-size: 10px; }
+
+  .legs { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  @media (max-width: 620px) { .legs { grid-template-columns: 1fr; } }
+  .leg { padding: 13px 16px; }
+  .leg + .leg { border-left: 1px solid var(--line-soft); }
+  @media (max-width: 620px) { .leg + .leg { border-left: 0; border-top: 1px solid var(--line-soft); } }
+  .leg .eyebrow { display: block; margin-bottom: 8px; }
+  .leg .p { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 2px 10px; padding: 5px 0; }
+  .leg .p + .p { border-top: 1px dashed var(--line-soft); }
+  .leg .p .nm { font-weight: 500; }
+  .leg .p .sub { grid-column: 1 / -1; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .leg .p .val { font-family: var(--mono); font-size: 13px; color: var(--muted); white-space: nowrap; }
+
+  .ledger { padding: 12px 16px 15px; border-top: 1px solid var(--line-soft); }
+  .ledger .row { display: flex; gap: 8px; align-items: baseline; font-size: 13.5px; padding: 3px 0; }
+  .ledger .row .d { font-family: var(--mono); font-variant-numeric: tabular-nums; width: 62px; text-align: right; flex: none; }
+  .ledger .row .slotname { font-family: var(--display); font-size: 11px; font-weight: 700; letter-spacing: .06em;
+                           color: var(--muted); width: 62px; flex: none; }
+  .up { color: var(--cool-ink); }
+  .down { color: var(--warm-ink); }
+  .caution { display: flex; gap: 8px; margin-top: 10px; padding: 9px 11px; border-radius: 7px; font-size: 13px;
+             background: color-mix(in oklab, var(--warm) 9%, transparent); color: var(--warm-ink);
+             border: 1px solid color-mix(in oklab, var(--warm) 28%, transparent); }
+  .caution b { font-weight: 600; }
+
+  .empty-state { padding: 30px 0; color: var(--muted); max-width: 62ch; }
+  .empty-state h3 { font-size: 16px; color: var(--ink); margin-bottom: 6px; }
+
+  #tip {
+    position: fixed; z-index: 20; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 7px; box-shadow: var(--shadow);
+    padding: 8px 10px; font-size: 12.5px; max-width: 250px; line-height: 1.45;
+  }
+  #tip b { font-family: var(--display); }
+  #tip .num { color: var(--muted); }
+
+  footer { margin-top: 42px; padding-top: 16px; border-top: 1px solid var(--line-soft); color: var(--faint); font-size: 12.5px; max-width: 74ch; }
+  footer p { margin: 0 0 7px; }
+
+  :focus-visible { outline: 2px solid var(--cool); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<header>
+  <div class="wrap">
+    <div class="masthead">
+      <h1>War Room</h1>
+      <div class="who" id="who"></div>
+      <div class="stamp" id="stamp"></div>
+    </div>
+    <nav class="leagues" id="leagues" role="tablist" aria-label="Leagues"></nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="views" id="views" role="tablist" aria-label="Views">
+    <button class="view-tab" id="tab-team" role="tab" aria-selected="true" aria-controls="view-team">My Team</button>
+    <button class="view-tab" id="tab-league" role="tab" aria-selected="false" aria-controls="view-league">League</button>
+    <button class="view-tab" id="tab-trades" role="tab" aria-selected="false" aria-controls="view-trades">Trade Finder</button>
+  </nav>
+
+  <main>
+    <section class="view" id="view-team" role="tabpanel" aria-labelledby="tab-team"></section>
+    <section class="view" id="view-league" role="tabpanel" aria-labelledby="tab-league" hidden></section>
+    <section class="view" id="view-trades" role="tabpanel" aria-labelledby="tab-trades" hidden></section>
+  </main>
+
+  <footer id="footnote"></footer>
+</div>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<script>
+<!--INJECT:analysis-->
+</script>
+
+<script>
+(function () {
+  "use strict";
+  const SNAPSHOT = <!--INJECT:data-->;
+
+  // ---------- small helpers ----------
+  const $ = (sel) => document.querySelector(sel);
+  const el = (tag, attrs, ...kids) => {
+    const node = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "class") node.className = v;
+      else if (k === "text") node.textContent = v;
+      else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+      else node.setAttribute(k, v === true ? "" : String(v));
+    }
+    for (const kid of kids.flat()) {
+      if (kid === null || kid === undefined || kid === false) continue;
+      node.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+    }
+    return node;
+  };
+  const n0 = (v) => Math.round(v).toLocaleString();
+  const n1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+  const signed = (v, digits) => (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(digits);
+  const ordinal = (i) => i + ["th", "st", "nd", "rd"][(i % 100 >= 11 && i % 100 <= 13) || i % 10 > 3 ? 0 : i % 10];
+  const SKILL = ["QB", "RB", "WR", "TE"];
+
+  /** Diverging colour for a z-score: warm below the league, cool above, neutral at 0. */
+  function heatColor(z) {
+    const clamped = Math.max(-1.75, Math.min(1.75, z || 0));
+    const strength = Math.round((Math.abs(clamped) / 1.75) * 72);
+    const pole = clamped >= 0 ? "var(--cool)" : "var(--warm)";
+    return "color-mix(in oklab, " + pole + " " + strength + "%, var(--surface-sunk))";
+  }
+
+  // ---------- state ----------
+  const leagues = SNAPSHOT.leagues.map((snap) => ({ snap, ctx: null, trades: null }));
+  let activeLeague = 0;
+  let activeView = "team";
+  let tradeMode = "weakness";   // or "shop"
+  let shopPlayerId = null;
+
+  function context(i) {
+    const entry = leagues[i];
+    if (!entry.ctx) {
+      entry.ctx = buildContext({
+        league: entry.snap.league,
+        teams: entry.snap.teams,
+        rosterSlots: entry.snap.rosterSlots,
+        playersById: entry.snap.players,
+        projections: entry.snap.projections,
+        rankings: [],
+        currentWeek: SNAPSHOT.meta.currentWeek,
+      });
+    }
+    return entry.ctx;
+  }
+  const current = () => leagues[activeLeague];
+  const myProfile = () => context(activeLeague).profiles.get(current().snap.myTeamId) || null;
+  const standings = (ctx) => [...ctx.profiles.values()].sort((a, b) => b.total - a.total);
+  const myRank = () => {
+    const ctx = context(activeLeague);
+    return standings(ctx).findIndex((p) => p.teamId === current().snap.myTeamId) + 1;
+  };
+
+  // ---------- tooltip ----------
+  const tip = $("#tip");
+  function showTip(evt, nodes) {
+    tip.replaceChildren(...nodes);
+    tip.style.opacity = "1";
+    const box = tip.getBoundingClientRect();
+    const x = Math.min(evt.clientX + 14, window.innerWidth - box.width - 10);
+    const y = Math.max(8, evt.clientY - box.height - 12);
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+  }
+  const hideTip = () => { tip.style.opacity = "0"; };
+
+  // ---------- shared fragments ----------
+  /** Sleeper reports "Unknown" for every team defense — that is not an injury. */
+  function isHurt(status) {
+    return !!status && !/^(active|unknown)$/i.test(String(status));
+  }
+
+  function playerCells(player, ros, quality) {
+    const bits = [player.position, player.nflTeam || "FA"].filter(Boolean).join(" · ");
+    const hurt = isHurt(player.status);
+    return [
+      el("td", { class: "who-cell" }, player.fullName,
+        hurt ? " " : null,
+        hurt ? el("span", { class: "chip hurt", text: shortStatus(player.status) }) : null,
+        quality === "missing" ? el("span", { class: "chip guess", text: "no data" }) : null),
+      el("td", { class: "meta", text: bits }),
+      el("td", { class: "pts num", text: ros === null ? "—" : n0(ros) }),
+    ];
+  }
+  function shortStatus(status) {
+    const s = String(status);
+    if (/injured reserve|^ir$/i.test(s)) return "IR";
+    if (/questionable/i.test(s)) return "Q";
+    if (/doubtful/i.test(s)) return "D";
+    if (/^out/i.test(s)) return "OUT";
+    return s.slice(0, 3).toUpperCase();
+  }
+
+  function strengthBars(profile) {
+    return el("div", { class: "bars" }, SKILL.map((pos) => {
+      const entry = profile.byPosition[pos];
+      const z = entry ? entry.z || 0 : 0;
+      const width = Math.min(50, (Math.abs(z) / 2) * 50);
+      const bar = el("i", {});
+      bar.style.background = z >= 0 ? "var(--cool)" : "var(--warm)";
+      bar.style.width = width + "%";
+      if (z >= 0) bar.style.left = "50%"; else bar.style.right = "50%";
+      return el("div", { class: "bar-row" },
+        el("div", { class: "pos", text: pos }),
+        el("div", { class: "track" }, bar),
+        el("div", { class: "z num", text: signed(z, 2) }));
+    }));
+  }
+
+  // ---------- view: my team ----------
+  function renderTeam() {
+    const host = $("#view-team");
+    const ctx = context(activeLeague);
+    const profile = myProfile();
+    host.replaceChildren();
+
+    if (!profile) {
+      host.append(el("div", { class: "empty-state" },
+        el("h3", { text: "No roster here under your name" }),
+        el("p", { text: "Sleeper lists this league but none of its rosters is owned by " +
+          SNAPSHOT.identity.displayName + ". That usually means the league was left mid-season. " +
+          "The League view still works." })));
+      return;
+    }
+
+    const weak = weakSpots(profile);
+    const chips = tradeChips(profile);
+    const rank = myRank();
+    const worst = weak[0];
+
+    host.append(el("div", { class: "facts" },
+      el("div", { class: "fact" },
+        el("span", { class: "eyebrow", text: "Best lineup, rest of season" }),
+        el("div", { class: "v num" }, n0(profile.total), " ", el("small", { text: "pts" }))),
+      el("div", { class: "fact" },
+        el("span", { class: "eyebrow", text: "In this league" }),
+        el("div", { class: "v num" }, ordinal(rank), " ", el("small", { text: "of " + ctx.teams.length }))),
+      el("div", { class: "fact" },
+        el("span", { class: "eyebrow", text: "Thinnest spot" }),
+        el("div", { class: "v" }, worst ? worst.position : "—", " ",
+          el("small", { class: "num", text: worst ? signed(worst.z || 0, 2) + " vs league" : "" })))));
+
+    // ---- left: the lineup the solver actually picked ----
+    const lineupRows = [];
+    const assigned = new Map(profile.lineup.assignments.map((a) => [a.slotIndex, a]));
+    const scoring = current().snap.league.rosterPositions
+      .map((slot, i) => ({ slot, i }))
+      .filter(({ slot }) => isScoringSlot(slot));
+
+    for (const { slot, i } of scoring) {
+      const a = assigned.get(i);
+      if (!a) {
+        lineupRows.push(el("tr", { class: "empty" },
+          el("td", { class: "slot", text: slot }),
+          el("td", { class: "who-cell", text: "nobody eligible" }),
+          el("td", { class: "meta", text: "" }),
+          el("td", { class: "pts num", text: "0" })));
+        continue;
+      }
+      const player = ctx.playersById[a.playerId];
+      lineupRows.push(el("tr", {},
+        el("td", { class: "slot", text: slot }),
+        ...playerCells(player, a.value, ctx.quality(player))));
+    }
+
+    const starting = new Set(profile.lineup.assignments.map((a) => a.playerId));
+    const roster = ctx.rosters.get(profile.teamId);
+    const bench = roster.all
+      .filter((p) => !starting.has(p.id))
+      .sort((a, b) => (ctx.rosFor(b) || 0) - (ctx.rosFor(a) || 0));
+
+    const left = el("div", {},
+      el("div", { class: "block" },
+        el("h2", { text: "Starting lineup" }),
+        el("table", { class: "sheet" },
+          el("thead", {}, el("tr", {},
+            el("th", { text: "Slot" }), el("th", { text: "Player" }), el("th", { text: "" }),
+            el("th", { class: "pts", text: "RoS" }))),
+          el("tbody", {}, lineupRows))),
+      el("div", { class: "block" },
+        el("h2", { text: "Bench · " + bench.length }),
+        el("table", { class: "sheet" },
+          el("tbody", {}, bench.map((p) => el("tr", { class: "bench" },
+            el("td", { class: "slot", text: "BN" }),
+            ...playerCells(p, ctx.rosFor(p), ctx.quality(p)))))),
+        el("p", { class: "note", text:
+          "A bench player is worth nothing to your lineup until someone ahead of him is gone — " +
+          "which is exactly what makes him tradeable." })));
+
+    // ---- right rail ----
+    const right = el("div", {},
+      el("div", { class: "block" },
+        el("h2", { text: "Strength by position" }),
+        strengthBars(profile),
+        el("p", { class: "note", text: "Standard deviations from the league average at that position." })),
+      el("div", { class: "block" },
+        el("h2", { text: "Weakest first" }),
+        el("ul", { class: "ranked" }, weak.map((entry) => el("li", {},
+          el("span", { class: "pos", text: entry.position }),
+          el("span", { class: "num", text: signed(entry.z || 0, 2) }),
+          el("span", { class: "why", text: entry.shortfall > 0
+            ? "a slot you cannot fill"
+            : entry.exposure > 0 && entry.z < 0
+              ? n0(entry.exposure) + " pts ride on the starters"
+              : "" }))))),
+      el("div", { class: "block" },
+        el("h2", { text: "Trade chips" }),
+        chips.length
+          ? el("ul", { class: "ranked" }, chips.slice(0, 6).map((chip) => el("li", {},
+              el("span", { class: "pos", text: chip.position }),
+              el("span", { text: chip.player.fullName }),
+              el("span", { class: "why", text: "costs you " +
+                n0(marginalOut(roster.active, chip.player.id, current().snap.league.rosterPositions, ctx.valueFor)) +
+                " pts to lose" }))))
+          : el("p", { class: "note", text: "Nothing spare. Every startable player you own is already starting." })));
+
+    host.append(el("div", { class: "split" }, left, right));
+  }
+
+  // ---------- view: league ----------
+  function renderLeague() {
+    const host = $("#view-league");
+    const ctx = context(activeLeague);
+    host.replaceChildren();
+
+    const rows = standings(ctx);
+    const best = Math.max(...rows.map((p) => p.total));
+    const floor = Math.min(...rows.map((p) => p.total));
+
+    const head = el("tr", {},
+      el("th", { class: "team-h", text: "Team" }),
+      SKILL.map((pos) => el("th", { text: pos })),
+      el("th", { text: "Best lineup" }));
+
+    const body = rows.map((profile) => {
+      const mine = profile.teamId === current().snap.myTeamId;
+      const cells = SKILL.map((pos) => {
+        const entry = profile.byPosition[pos];
+        const z = entry ? entry.z || 0 : 0;
+        const cell = el("td", { class: "cell" + (entry && entry.shortfall > 0 ? " hole" : ""), text: signed(z, 1) });
+        cell.style.background = heatColor(z);
+        cell.addEventListener("mousemove", (evt) => showTip(evt, [
+          el("b", { text: profile.teamName + " · " + pos }), el("br", {}),
+          el("span", { class: "num", text: n0(entry ? entry.starterStrength : 0) + " pts starting" }), el("br", {}),
+          el("span", { class: "num", text: signed(z, 2) + " vs league" }),
+          entry && entry.shortfall > 0 ? el("br", {}) : null,
+          entry && entry.shortfall > 0 ? el("span", { text: "cannot fill a slot here" }) : null,
+        ]));
+        cell.addEventListener("mouseleave", hideTip);
+        return cell;
+      });
+
+      // Scale across the league's own range, not from zero: every roster
+      // totals within a quarter of every other, so a zero-based bar is twelve
+      // near-full bars that discriminate nothing.
+      const fill = el("i", { class: mine ? "me" : null });
+      const span = best - floor || 1;
+      fill.style.width = (10 + ((profile.total - floor) / span) * 90) + "%";
+      return el("tr", {},
+        el("td", { class: "team" + (mine ? " me" : ""), title: profile.teamName, text: profile.teamName }),
+        cells,
+        el("td", { class: "total" },
+          el("div", { class: "tbar" }, fill),
+          el("span", { text: n0(profile.total) })));
+    });
+
+    host.append(
+      el("div", { class: "block", style: "padding-top:24px" },
+        el("h2", { text: "Every roster, by position" }),
+        el("div", { class: "heat-scroll" },
+          el("table", { class: "heat" }, el("thead", {}, head), el("tbody", {}, body))),
+        el("div", { class: "scale" },
+          el("span", { text: "weak" }),
+          el("span", { class: "ramp" },
+            [-1.75, -1.1, -0.45, 0, 0.45, 1.1, 1.75].map((z) => {
+              const swatch = el("i", {});
+              swatch.style.background = heatColor(z);
+              return swatch;
+            })),
+          el("span", { text: "strong" }),
+          el("span", { text: "· outlined = a slot that cannot be filled" })),
+        el("p", { class: "note", text:
+          "Sorted by best possible lineup. Each cell is that team's starters at the position, " +
+          "measured against the rest of the league." })));
+  }
+
+  // ---------- view: trade finder ----------
+  function renderTrades() {
+    const host = $("#view-trades");
+    const ctx = context(activeLeague);
+    const profile = myProfile();
+    host.replaceChildren();
+
+    if (!profile) {
+      host.append(el("div", { class: "empty-state" },
+        el("h3", { text: "Nothing to trade" }),
+        el("p", { text: "You do not own a roster in this league." })));
+      return;
+    }
+
+    const roster = ctx.rosters.get(profile.teamId);
+    const tradable = roster.all
+      .filter((p) => p.position !== "K" && p.position !== "DEF")
+      .sort((a, b) => (ctx.rosFor(b) || 0) - (ctx.rosFor(a) || 0));
+
+    const modeButtons = el("div", { class: "seg" },
+      el("button", {
+        "aria-pressed": tradeMode === "weakness",
+        onclick: () => { tradeMode = "weakness"; renderTrades(); },
+      }, "Fix my weaknesses"),
+      el("button", {
+        "aria-pressed": tradeMode === "shop",
+        onclick: () => { tradeMode = "shop"; renderTrades(); },
+      }, "Shop a player"));
+
+    const controls = el("div", { class: "controls" }, modeButtons);
+    if (tradeMode === "shop") {
+      if (!shopPlayerId || !tradable.some((p) => p.id === shopPlayerId)) {
+        shopPlayerId = tradable.length ? tradable[0].id : null;
+      }
+      controls.append(el("select", {
+        id: "shop-player",
+        "aria-label": "Player to shop",
+        onchange: (evt) => { shopPlayerId = evt.target.value; renderTrades(); },
+      }, tradable.map((p) => el("option", {
+        value: p.id, selected: p.id === shopPlayerId,
+      }, p.fullName + " · " + p.position))));
+    }
+    host.append(controls);
+
+    // Ask for more than we show, then keep at most two per partner. The engine
+    // ranks purely by my gain, and one well-matched opponent can fill the whole
+    // list with variations on the same swap — which reads as one option, not ten.
+    const options = { limit: 40 };
+    if (tradeMode === "shop" && shopPlayerId) options.shopPlayerId = shopPlayerId;
+    const result = findTrades(ctx, profile.teamId, options);
+    const perPartner = new Map();
+    const shown = result.suggestions.filter((offer) => {
+      const count = perPartner.get(offer.partnerTeamId) || 0;
+      if (count >= 2) return false;
+      perPartner.set(offer.partnerTeamId, count + 1);
+      return true;
+    }).slice(0, 12);
+
+    if (!result.suggestions.length) {
+      host.append(el("div", { class: "empty-state" },
+        el("h3", { text: "No trade here that helps both sides" }),
+        el("p", { text: tradeMode === "shop"
+          ? "Nobody in this league improves their own starting lineup by taking this player. " +
+            "That usually means everyone is already deeper than you at his position."
+          : "Every package was rejected because it made one side worse. " +
+            "That is the filter working, not a failure — a trade the other manager loses is a trade they decline." }),
+        el("p", { class: "note", text: result.scanned.toLocaleString() + " packages examined." })));
+      return;
+    }
+
+    host.append(el("p", { class: "note", style: "margin:14px 0 0" },
+      shown.length + " of " + result.evaluated.toLocaleString() +
+      " workable packages, best first, at most two per manager. " +
+      "Both lineups improve in every one."));
+
+    shown.forEach((offer, i) => host.append(offerCard(offer, ctx, i === 0)));
+  }
+
+  function offerCard(offer, ctx, openByDefault) {
+    const sentValue = offer.send.reduce((sum, p) => sum + (p.ros || 0), 0);
+    const gotValue = offer.receive.reduce((sum, p) => sum + (p.ros || 0), 0);
+    // Mutual lineup gain is necessary but not sufficient. A package where they
+    // ship far more raw production than they get back is one a real manager
+    // refuses on sight, whatever the optimiser says about their bench.
+    const lopsided = gotValue > sentValue * 1.6 && gotValue - sentValue > 120;
+
+    const card = el("details", { class: "offer", open: !!openByDefault });
+    card.append(el("summary", {},
+      el("div", {},
+        el("div", { class: "partner" }, offer.partnerName || "Team",
+          el("span", {}, offer.partnerOwner ? " · " + offer.partnerOwner : "")),
+        // The collapsed row has to say what the trade IS. A list of partner
+        // names and numbers cannot be scanned — you would have to open every
+        // card to find out they are variations on one swap.
+        el("div", { class: "swap" },
+          el("span", { class: "out" }, offer.send.map((p) => p.name).join(" + ")),
+          el("span", { class: "arrow", text: "→" }),
+          el("span", { class: "in" }, offer.receive.map((p) => p.name).join(" + ")))),
+      el("div", { class: "gains" },
+        el("div", { class: "g mine" },
+          el("span", { class: "eyebrow", text: "you gain" }),
+          el("b", { text: "+" + n1(offer.myGain) })),
+        el("div", { class: "g" },
+          el("span", { class: "eyebrow", text: "they gain" }),
+          el("b", { text: "+" + n1(offer.theirGain) })))));
+
+    const sendLeg = el("div", { class: "leg" }, el("span", { class: "eyebrow", text: "You send" }),
+      offer.send.map((p) => el("div", { class: "p" },
+        el("div", { class: "nm", text: p.name }),
+        el("div", { class: "val", text: n0(p.ros) + " pts" }),
+        el("div", { class: "sub", text: p.position + " · " + (p.nflTeam || "FA") +
+          " · costs you " + n0(p.marginalCost) }))));
+
+    const getLeg = el("div", { class: "leg" }, el("span", { class: "eyebrow", text: "You receive" }),
+      offer.receive.map((p) => el("div", { class: "p" },
+        el("div", { class: "nm" }, p.name, " ",
+          p.wouldStart ? el("span", { class: "chip starts", text: "starts" }) : null),
+        el("div", { class: "val", text: n0(p.ros) + " pts" }),
+        el("div", { class: "sub", text: p.position + " · " + (p.nflTeam || "FA") }))));
+
+    card.append(el("div", { class: "legs" }, sendLeg, getLeg));
+
+    const ledger = el("div", { class: "ledger" },
+      el("span", { class: "eyebrow", text: "Where your gain comes from" }),
+      offer.lineupChanges.map((change) => {
+        const from = change.fromPlayerId ? ctx.playersById[change.fromPlayerId] : null;
+        const to = change.toPlayerId ? ctx.playersById[change.toPlayerId] : null;
+        return el("div", { class: "row" },
+          el("span", { class: "slotname", text: change.slot }),
+          el("span", {}, to ? to.fullName : "nobody",
+            from ? " replaces " + from.fullName : " fills an empty slot"),
+          el("span", { class: "d " + (change.delta >= 0 ? "up" : "down"), text: signed(change.delta, 1) }));
+      }));
+
+    if (lopsided) {
+      ledger.append(el("div", { class: "caution" },
+        el("span", {}, el("b", { text: "Lopsided on paper. " }),
+          "You would take back " + n0(gotValue - sentValue) + " more points of production than you give up. " +
+          "Their lineup still improves — the players they send are stuck behind better ones — but expect " +
+          "this to read as a fleece and get declined.")));
+    }
+    if (offer.caveats && offer.caveats.length) {
+      ledger.append(el("p", { class: "note", text: "Note: " + offer.caveats.join(", ") + "." }));
+    }
+    card.append(ledger);
+    return card;
+  }
+
+  // ---------- chrome ----------
+  function renderChrome() {
+    $("#who").replaceChildren(
+      document.createTextNode("for "),
+      el("b", { text: SNAPSHOT.identity.displayName || SNAPSHOT.identity.sleeperUsername }));
+
+    const when = new Date(SNAPSHOT.meta.fetchedAt);
+    $("#stamp").replaceChildren(
+      el("div", { text: SNAPSHOT.meta.season + " · week " + SNAPSHOT.meta.currentWeek }),
+      el("div", { text: "data " + when.toLocaleDateString(undefined, { month: "short", day: "numeric" }) +
+        " " + when.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) }));
+
+    const nav = $("#leagues");
+    nav.replaceChildren(...leagues.map((entry, i) => {
+      const tab = el("button", {
+        class: "league-tab", role: "tab", "aria-selected": i === activeLeague,
+        onclick: () => { activeLeague = i; render(); },
+      }, entry.snap.league.name);
+      if (entry.ctx && entry.snap.myTeamId) {
+        const rank = standings(entry.ctx).findIndex((p) => p.teamId === entry.snap.myTeamId) + 1;
+        if (rank > 0) tab.append(el("span", { class: "rank", text: rank + "/" + entry.ctx.teams.length }));
+      }
+      return tab;
+    }));
+
+    for (const view of ["team", "league", "trades"]) {
+      $("#tab-" + view).setAttribute("aria-selected", String(view === activeView));
+      $("#view-" + view).hidden = view !== activeView;
+    }
+
+    const league = current().snap.league;
+    $("#footnote").replaceChildren(
+      el("p", {}, el("b", { text: "Points are rest-of-season totals" }),
+        " — a weekly projection multiplied across the " + context(activeLeague).weeks +
+        " weeks left, discounted for injury status. " + league.scoringType.replace("_", "-").toUpperCase() +
+        " scoring, " + league.totalRosters + " teams."),
+      el("p", { text: "Projections: " + SNAPSHOT.meta.projectionSource + ". Last season's production is a " +
+        "starting point, not a forecast — it knows nothing about team changes or depth charts, and rookies " +
+        "have no line at all, so they carry no projection rather than a zero." }),
+      el("p", { text: "A trade only appears here if both teams' best possible lineups improve. " +
+        "Value is measured against your own roster: a player you cannot start is worth nothing to you, " +
+        "however good he is." }));
+  }
+
+  function render() {
+    renderChrome();
+    if (activeView === "team") renderTeam();
+    else if (activeView === "league") renderLeague();
+    else renderTrades();
+    renderChrome();  // league ranks need the context the view just built
+  }
+
+  for (const view of ["team", "league", "trades"]) {
+    $("#tab-" + view).addEventListener("click", () => { activeView = view; render(); });
+  }
+  window.addEventListener("scroll", hideTip, { passive: true });
+
+  render();
+})();
+</script>
