@@ -1,0 +1,626 @@
+<title>War Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F3F5F4;
+    --surface: #FFFFFF;
+    --surface-2: #E9EDEC;
+    --border: #D7DCDA;
+    --ink: #16201C;
+    --ink-dim: #5B6864;
+    --accent: #12777A;
+    --accent-ink: #FFFFFF;
+    --score: #A56A08;
+    --good: #2E8B57;
+    --warn: #B9720F;
+    --bad: #C1443A;
+    --radius: 10px;
+    --font-display: "Oswald", "Arial Narrow", sans-serif;
+    --font-body: "IBM Plex Sans", system-ui, sans-serif;
+    --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #12161A;
+      --surface: #1B2126;
+      --surface-2: #212A30;
+      --border: #2B343A;
+      --ink: #E7ECEA;
+      --ink-dim: #93A19C;
+      --accent: #3FD0C9;
+      --accent-ink: #0B1210;
+      --score: #E8A33D;
+      --good: #4FBE82;
+      --warn: #E0A23D;
+      --bad: #E5776B;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #12161A;
+    --surface: #1B2126;
+    --surface-2: #212A30;
+    --border: #2B343A;
+    --ink: #E7ECEA;
+    --ink-dim: #93A19C;
+    --accent: #3FD0C9;
+    --accent-ink: #0B1210;
+    --score: #E8A33D;
+    --good: #4FBE82;
+    --warn: #E0A23D;
+    --bad: #E5776B;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    padding-inline: 20px;
+    padding-block: 20px 48px;
+    max-width: 1180px;
+    margin-inline: auto;
+  }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; }
+  a { color: var(--accent); }
+  button { font-family: inherit; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .tabular { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+  .topbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-block-end: 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 18px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 1.7rem; letter-spacing: 0.02em; }
+  .brand .tagline { font-size: 0.8rem; color: var(--ink-dim); }
+  .refresh-status { font-size: 0.78rem; color: var(--ink-dim); text-align: right; }
+  .refresh-status strong { color: var(--ink); font-weight: 500; }
+
+  .demo-banner {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 0.82rem;
+    color: var(--ink-dim);
+    margin-bottom: 18px;
+  }
+  .demo-banner strong { color: var(--ink); }
+
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 720px) { .layout { grid-template-columns: 1fr; } }
+
+  .league-rail { display: flex; flex-direction: column; gap: 8px; position: sticky; top: 12px; }
+  @media (max-width: 720px) {
+    .league-rail { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 4px; }
+    .league-card { min-width: 200px; }
+  }
+  .rail-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); margin-bottom: 2px; }
+  .league-card {
+    text-align: left;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .league-card:hover { border-color: var(--accent); }
+  .league-card.active { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .league-card .name { font-family: var(--font-display); font-size: 1rem; font-weight: 600; }
+  .league-card .meta-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.7rem; font-weight: 500;
+    padding: 2px 7px; border-radius: 999px;
+    border: 1px solid var(--border); color: var(--ink-dim);
+    text-transform: uppercase; letter-spacing: 0.03em;
+    white-space: nowrap;
+  }
+  .chip.pos { font-family: var(--font-mono); color: var(--ink); background: var(--surface-2); border-color: transparent; }
+  .chip.good { color: var(--good); border-color: var(--good); }
+  .chip.warn { color: var(--warn); border-color: var(--warn); }
+  .chip.bad { color: var(--bad); border-color: var(--bad); }
+  .chip.accent { color: var(--accent); border-color: var(--accent); }
+
+  .content { min-width: 0; }
+  .league-summary {
+    display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 10px 16px;
+    margin-bottom: 14px;
+  }
+  .league-summary h2 { font-size: 1.4rem; }
+  .league-summary .sub { color: var(--ink-dim); font-size: 0.85rem; margin-top: 2px; }
+  .league-summary .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+  .tab {
+    background: none; border: none; border-bottom: 2px solid transparent;
+    color: var(--ink-dim); font-size: 0.85rem; font-weight: 500;
+    padding: 8px 4px; margin-bottom: -1px; cursor: pointer;
+  }
+  .tab:hover { color: var(--ink); }
+  .tab.active { color: var(--ink); border-bottom-color: var(--accent); }
+
+  .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .filter-row label { font-size: 0.78rem; color: var(--ink-dim); }
+  select {
+    font-family: var(--font-body); font-size: 0.85rem;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px;
+  }
+
+  .team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .team-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px; }
+  .team-card .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; gap: 8px; }
+  .team-card .head h3 { font-size: 1rem; }
+  .team-card .owner { font-size: 0.75rem; color: var(--ink-dim); }
+  .group-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-dim); margin: 10px 0 4px; }
+  .group-label:first-of-type { margin-top: 4px; }
+  .player-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid var(--border); font-size: 0.85rem; }
+  .player-row:last-child { border-bottom: none; }
+  .player-row .pname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .player-row .nfl { color: var(--ink-dim); font-size: 0.78rem; }
+  .player-row .pts { color: var(--score); font-weight: 600; min-width: 3.4em; text-align: right; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.87rem; }
+  thead th { text-align: left; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-dim); padding: 6px 10px; border-bottom: 1px solid var(--border); }
+  tbody td { padding: 7px 10px; border-bottom: 1px solid var(--border); }
+  tbody tr:hover { background: var(--surface-2); }
+  .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); }
+  td.pts, td.rank { color: var(--score); font-weight: 600; }
+  td.rank { color: var(--ink); }
+
+  .note { font-size: 0.78rem; color: var(--ink-dim); margin-bottom: 12px; font-style: italic; }
+  .empty-state { padding: 30px 16px; text-align: center; color: var(--ink-dim); font-size: 0.9rem; }
+</style>
+
+<div class="topbar">
+  <div class="brand">
+    <h1>War Room</h1>
+    <span class="tagline">Multi-league fantasy football control</span>
+  </div>
+  <div class="refresh-status" id="refreshStatus">Connecting&hellip;</div>
+</div>
+
+<div id="demoBanner"></div>
+
+<div class="layout">
+  <nav class="league-rail" id="leagueRail">
+    <div class="rail-label">Leagues</div>
+  </nav>
+  <main class="content">
+    <div class="league-summary" id="leagueSummary"></div>
+    <div class="tabs" id="tabs">
+      <button class="tab active" data-tab="rosters">Rosters</button>
+      <button class="tab" data-tab="waivers">Waiver Wire</button>
+      <button class="tab" data-tab="rankings">Rankings</button>
+    </div>
+    <div id="panel"></div>
+  </main>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var POSITIONS = ['QB', 'RB', 'WR', 'TE', 'K', 'DEF'];
+  var POSITION_ORDER = { QB: 0, RB: 1, WR: 2, TE: 3, FLEX: 4, K: 5, DEF: 6 };
+  var SLOT_ORDER = { starter: 0, bench: 1, ir: 2, taxi: 3 };
+  var SLOT_LABEL = { starter: 'Starters', bench: 'Bench', ir: 'Injured Reserve', taxi: 'Taxi Squad' };
+
+  var state = {
+    leagues: [],
+    players: {},
+    rankings: [],
+    meta: {},
+    teams: [],
+    rosterSlots: [],
+    projections: {},
+    selectedLeagueId: null,
+    activeTab: 'rosters',
+    waiverPosFilter: 'ALL',
+    rankPosFilter: 'ALL',
+    dbAvailable: null,
+  };
+
+  var leagueScopedUnsubs = [];
+
+  function el(tag, attrs, children) {
+    var node = document.createElement(tag);
+    attrs = attrs || {};
+    for (var k in attrs) {
+      if (k === 'class') node.className = attrs[k];
+      else if (k === 'text') node.textContent = attrs[k];
+      else if (k.indexOf('on') === 0 && typeof attrs[k] === 'function') node.addEventListener(k.slice(2), attrs[k]);
+      else node.setAttribute(k, attrs[k]);
+    }
+    (children || []).forEach(function (c) { if (c) node.appendChild(c); });
+    return node;
+  }
+
+  function statusChip(status) {
+    if (!status || status === 'Active') return null;
+    var short = status, cls = 'warn';
+    if (/injured reserve/i.test(status)) { short = 'IR'; cls = 'bad'; }
+    else if (/^out/i.test(status)) { short = 'OUT'; cls = 'bad'; }
+    else if (/questionable/i.test(status)) { short = 'Q'; cls = 'warn'; }
+    else if (/doubtful/i.test(status)) { short = 'D'; cls = 'warn'; }
+    else if (/inactive/i.test(status)) { short = 'INA'; cls = 'ink-dim'; }
+    return el('span', { class: 'chip ' + cls, text: short });
+  }
+
+  function relativeTime(iso) {
+    if (!iso) return 'never';
+    var diffMs = Date.now() - new Date(iso).getTime();
+    var mins = Math.round(diffMs / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + ' hr ago';
+    return Math.round(hrs / 24) + ' d ago';
+  }
+
+  function renderRefreshStatus() {
+    var out = document.getElementById('refreshStatus');
+    out.innerHTML = '';
+    if (state.dbAvailable === false) {
+      out.textContent = 'Live data unavailable in this view';
+      return;
+    }
+    if (state.dbAvailable === null) {
+      out.textContent = 'Connecting…';
+      return;
+    }
+    var label = document.createElement('span');
+    label.textContent = 'Last refreshed ';
+    var strong = document.createElement('strong');
+    strong.textContent = relativeTime(state.meta.lastRefreshedAt);
+    out.appendChild(label);
+    out.appendChild(strong);
+  }
+
+  function renderDemoBanner() {
+    var host = document.getElementById('demoBanner');
+    host.innerHTML = '';
+    if (!state.meta.demoMode) return;
+    host.appendChild(el('div', { class: 'demo-banner' }, [
+      el('strong', { text: 'Demo data. ' }),
+      document.createTextNode(state.meta.demoNote || 'Connect a real league to replace this.'),
+    ]));
+  }
+
+  function renderLeagueRail() {
+    var rail = document.getElementById('leagueRail');
+    rail.innerHTML = '';
+    rail.appendChild(el('div', { class: 'rail-label', text: 'Leagues' }));
+    if (state.leagues.length === 0) {
+      rail.appendChild(el('div', { class: 'note', text: state.dbAvailable === false ? '' : 'No leagues connected yet.' }));
+      return;
+    }
+    state.leagues.forEach(function (league) {
+      var card = el('button', {
+        class: 'league-card' + (league.id === state.selectedLeagueId ? ' active' : ''),
+        onclick: function () { selectLeague(league.id); },
+      }, [
+        el('div', { class: 'name', text: league.name }),
+        el('div', { class: 'meta-row' }, [
+          el('span', { class: 'chip', text: league.platform }),
+          el('span', { class: 'chip', text: (league.scoringType || '').toUpperCase() }),
+        ]),
+      ]);
+      rail.appendChild(card);
+    });
+  }
+
+  function renderLeagueSummary() {
+    var host = document.getElementById('leagueSummary');
+    host.innerHTML = '';
+    var league = state.leagues.filter(function (l) { return l.id === state.selectedLeagueId; })[0];
+    if (!league) {
+      host.appendChild(el('div', { class: 'sub', text: state.dbAvailable === false ? '' : 'Select a league.' }));
+      return;
+    }
+    host.appendChild(el('div', {}, [
+      el('h2', { text: league.name }),
+      el('div', { class: 'sub', text: league.totalRosters + ' teams · Week ' + (state.meta.currentWeek || '—') + ' · ' + league.season }),
+    ]));
+    host.appendChild(el('div', { class: 'badges' }, [
+      el('span', { class: 'chip accent', text: league.platform }),
+      el('span', { class: 'chip', text: (league.scoringType || '').toUpperCase() }),
+    ]));
+  }
+
+  function currentLeague() {
+    return state.leagues.filter(function (l) { return l.id === state.selectedLeagueId; })[0] || null;
+  }
+
+  function teamsForCurrentLeague() {
+    return state.teams.filter(function (t) { return t.leagueId === state.selectedLeagueId; });
+  }
+
+  function rosterSlotsForCurrentLeague() {
+    return state.rosterSlots.filter(function (s) { return s.leagueId === state.selectedLeagueId; });
+  }
+
+  function projectedPoints(playerId) {
+    var p = state.projections[state.selectedLeagueId + '::' + playerId];
+    return p ? p.projectedPoints : null;
+  }
+
+  function playerRow(playerId, opts) {
+    opts = opts || {};
+    var player = state.players[playerId];
+    if (!player) return el('div', { class: 'player-row' }, [el('span', { class: 'pname', text: 'Unknown player' })]);
+    var pts = projectedPoints(playerId);
+    var chip = statusChip(player.status);
+    var row = el('div', { class: 'player-row' }, [
+      el('span', { class: 'chip pos', text: player.position }),
+      el('span', { class: 'pname', text: player.fullName }),
+      el('span', { class: 'nfl tabular', text: player.nflTeam || 'FA' }),
+    ]);
+    if (chip) row.appendChild(chip);
+    if (!opts.hidePoints) row.appendChild(el('span', { class: 'pts tabular', text: pts != null ? pts.toFixed(1) : '—' }));
+    return row;
+  }
+
+  function renderRosters() {
+    var panel = document.getElementById('panel');
+    panel.innerHTML = '';
+    if (!state.selectedLeagueId) { panel.appendChild(el('div', { class: 'empty-state', text: 'Select a league to view rosters.' })); return; }
+    var teams = teamsForCurrentLeague();
+    if (teams.length === 0) { panel.appendChild(el('div', { class: 'empty-state', text: 'No teams found for this league yet.' })); return; }
+    var slots = rosterSlotsForCurrentLeague();
+    var grid = el('div', { class: 'team-grid' });
+
+    teams.slice().sort(function (a, b) { return b.wins - a.wins || a.losses - b.losses; }).forEach(function (team) {
+      var teamSlots = slots.filter(function (s) { return s.teamId === team.id; });
+      var groups = {};
+      teamSlots.forEach(function (s) { (groups[s.slot] = groups[s.slot] || []).push(s); });
+
+      var card = el('div', { class: 'team-card' }, [
+        el('div', { class: 'head' }, [
+          el('div', {}, [
+            el('h3', { text: team.teamName }),
+            el('div', { class: 'owner', text: team.ownerName }),
+          ]),
+          el('span', { class: 'chip tabular', text: team.wins + '-' + team.losses + (team.ties ? '-' + team.ties : '') }),
+        ]),
+      ]);
+
+      Object.keys(groups).sort(function (a, b) { return SLOT_ORDER[a] - SLOT_ORDER[b]; }).forEach(function (slotKey) {
+        card.appendChild(el('div', { class: 'group-label', text: SLOT_LABEL[slotKey] || slotKey }));
+        groups[slotKey]
+          .slice()
+          .sort(function (a, b) {
+            var pa = state.players[a.playerId], pb = state.players[b.playerId];
+            var oa = pa ? (POSITION_ORDER[pa.position] ?? 9) : 9;
+            var ob = pb ? (POSITION_ORDER[pb.position] ?? 9) : 9;
+            return oa - ob;
+          })
+          .forEach(function (s) { card.appendChild(playerRow(s.playerId)); });
+      });
+
+      grid.appendChild(card);
+    });
+
+    panel.appendChild(grid);
+  }
+
+  function renderWaivers() {
+    var panel = document.getElementById('panel');
+    panel.innerHTML = '';
+    if (!state.selectedLeagueId) { panel.appendChild(el('div', { class: 'empty-state', text: 'Select a league to view its waiver wire.' })); return; }
+
+    var rosteredIds = {};
+    rosterSlotsForCurrentLeague().forEach(function (s) { rosteredIds[s.playerId] = true; });
+    var available = Object.keys(state.players)
+      .map(function (id) { return state.players[id]; })
+      .filter(function (p) { return !rosteredIds[p.id] && p.nflTeam && POSITIONS.indexOf(p.position) !== -1; });
+
+    panel.appendChild(el('div', { class: 'filter-row' }, [
+      el('label', { text: 'Position' }),
+      positionSelect(state.waiverPosFilter, function (val) { state.waiverPosFilter = val; renderWaivers(); }),
+    ]));
+
+    var filtered = state.waiverPosFilter === 'ALL' ? available : available.filter(function (p) { return p.position === state.waiverPosFilter; });
+    filtered.sort(function (a, b) { return (projectedPoints(b.id) || 0) - (projectedPoints(a.id) || 0); });
+
+    if (filtered.length === 0) {
+      panel.appendChild(el('div', { class: 'empty-state', text: 'No available players match this filter.' }));
+      return;
+    }
+
+    var tbody = el('tbody');
+    filtered.forEach(function (p) {
+      var pts = projectedPoints(p.id);
+      var chip = statusChip(p.status);
+      var tr = el('tr', {}, [
+        el('td', {}, [document.createTextNode(p.fullName)]),
+        el('td', {}, [el('span', { class: 'chip pos', text: p.position })]),
+        el('td', { class: 'tabular', text: p.nflTeam || 'FA' }),
+        el('td', { class: 'pts tabular', text: pts != null ? pts.toFixed(1) : '—' }),
+      ]);
+      var statusTd = el('td', {}, chip ? [chip] : []);
+      tr.appendChild(statusTd);
+      tbody.appendChild(tr);
+    });
+
+    panel.appendChild(el('div', { class: 'table-wrap' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', { text: 'Player' }), el('th', { text: 'Pos' }), el('th', { text: 'Team' }),
+          el('th', { text: 'Proj. Pts' }), el('th', { text: 'Status' }),
+        ])]),
+        tbody,
+      ]),
+    ]));
+  }
+
+  function positionSelect(current, onChange) {
+    var sel = el('select', { onchange: function (e) { onChange(e.target.value); } });
+    ['ALL'].concat(POSITIONS).forEach(function (pos) {
+      var opt = document.createElement('option');
+      opt.value = pos; opt.textContent = pos === 'ALL' ? 'All positions' : pos;
+      if (pos === current) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    return sel;
+  }
+
+  function renderRankings() {
+    var panel = document.getElementById('panel');
+    panel.innerHTML = '';
+
+    panel.appendChild(el('div', { class: 'note', text: 'Demo model ranking, derived from this dataset’s own scoring — not a real expert-consensus feed. Connect FantasyPros to replace this.' }));
+    panel.appendChild(el('div', { class: 'filter-row' }, [
+      el('label', { text: 'Position' }),
+      positionSelect(state.rankPosFilter, function (val) { state.rankPosFilter = val; renderRankings(); }),
+    ]));
+
+    var rows = state.rankPosFilter === 'ALL' ? state.rankings : state.rankings.filter(function (r) { return r.position === state.rankPosFilter; });
+    rows = rows.slice().sort(function (a, b) { return a.rank - b.rank; });
+
+    if (rows.length === 0) {
+      panel.appendChild(el('div', { class: 'empty-state', text: 'No rankings available yet.' }));
+      return;
+    }
+
+    var tbody = el('tbody');
+    rows.forEach(function (r) {
+      var player = state.players[r.playerId];
+      tbody.appendChild(el('tr', {}, [
+        el('td', { class: 'rank tabular', text: '#' + r.rank }),
+        el('td', { text: player ? player.fullName : r.playerId }),
+        el('td', {}, [el('span', { class: 'chip pos', text: r.position })]),
+        el('td', { class: 'tabular', text: player ? (player.nflTeam || 'FA') : '' }),
+        el('td', { class: 'tabular', text: r.tier != null ? 'Tier ' + r.tier : '—' }),
+      ]));
+    });
+
+    panel.appendChild(el('div', { class: 'table-wrap' }, [
+      el('table', {}, [
+        el('thead', {}, [el('tr', {}, [
+          el('th', { text: 'Rank' }), el('th', { text: 'Player' }), el('th', { text: 'Pos' }),
+          el('th', { text: 'Team' }), el('th', { text: 'Tier' }),
+        ])]),
+        tbody,
+      ]),
+    ]));
+  }
+
+  function renderPanel() {
+    if (state.activeTab === 'rosters') renderRosters();
+    else if (state.activeTab === 'waivers') renderWaivers();
+    else renderRankings();
+  }
+
+  function renderAll() {
+    renderRefreshStatus();
+    renderDemoBanner();
+    renderLeagueRail();
+    renderLeagueSummary();
+    renderPanel();
+  }
+
+  document.getElementById('tabs').addEventListener('click', function (e) {
+    var btn = e.target.closest('.tab');
+    if (!btn) return;
+    state.activeTab = btn.getAttribute('data-tab');
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (t) { t.classList.toggle('active', t === btn); });
+    renderPanel();
+  });
+
+  function selectLeague(id) {
+    if (id === state.selectedLeagueId) return;
+    state.selectedLeagueId = id;
+    subscribeLeagueScoped(window.__db);
+    renderAll();
+  }
+
+  function subscribeLeagueScoped(db) {
+    leagueScopedUnsubs.forEach(function (u) { u(); });
+    leagueScopedUnsubs = [];
+    if (!db || !state.selectedLeagueId) return;
+
+    var leagueId = state.selectedLeagueId;
+    leagueScopedUnsubs.push(
+      db.collection('teams').where('leagueId', '==', leagueId).onSnapshot(function (snap) {
+        state.teams = state.teams.filter(function (t) { return t.leagueId !== leagueId; })
+          .concat(snap.docs.map(function (d) { return d.data(); }));
+        renderAll();
+      }, function () {})
+    );
+    leagueScopedUnsubs.push(
+      db.collection('rosterSlots').where('leagueId', '==', leagueId).onSnapshot(function (snap) {
+        state.rosterSlots = state.rosterSlots.filter(function (s) { return s.leagueId !== leagueId; })
+          .concat(snap.docs.map(function (d) { return d.data(); }));
+        renderAll();
+      }, function () {})
+    );
+    leagueScopedUnsubs.push(
+      db.collection('projections').where('leagueId', '==', leagueId).onSnapshot(function (snap) {
+        snap.docs.forEach(function (d) {
+          var p = d.data();
+          state.projections[leagueId + '::' + p.playerId] = p;
+        });
+        renderAll();
+      }, function () {})
+    );
+  }
+
+  function boot() {
+    if (!window.claude || !window.claude.use) {
+      state.dbAvailable = false;
+      renderAll();
+      return;
+    }
+    window.claude.use('db').then(function (db) {
+      window.__db = db;
+      state.dbAvailable = !!db;
+      if (!db) { renderAll(); return; }
+
+      db.collection('leagues').onSnapshot(function (snap) {
+        state.leagues = snap.docs.map(function (d) { return d.data(); });
+        if (!state.selectedLeagueId && state.leagues.length) {
+          state.selectedLeagueId = state.leagues[0].id;
+          subscribeLeagueScoped(db);
+        }
+        renderAll();
+      }, function () { state.dbAvailable = false; renderAll(); });
+
+      db.collection('players').onSnapshot(function (snap) {
+        var map = {};
+        snap.docs.forEach(function (d) { map[d.id] = d.data(); });
+        state.players = map;
+        renderAll();
+      }, function () {});
+
+      db.collection('rankings').onSnapshot(function (snap) {
+        state.rankings = snap.docs.map(function (d) { return d.data(); });
+        renderAll();
+      }, function () {});
+
+      db.doc('meta/status').onSnapshot(function (snap) {
+        state.meta = snap.exists ? snap.data() : {};
+        renderAll();
+      }, function () {});
+    });
+  }
+
+  renderAll();
+  boot();
+  setInterval(renderRefreshStatus, 30000);
+})();
+</script>

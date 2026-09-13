@@ -1,0 +1,14 @@
+{
+  "name": "fantasy-tool",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Multi-league fantasy football analysis dashboard, published as a live Claude Artifact.",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "refresh:demo": "node scripts/build-demo-data.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

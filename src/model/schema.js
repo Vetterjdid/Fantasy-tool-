@@ -1,0 +1,83 @@
+/**
+ * Unified internal data model that every platform integration (Sleeper, ESPN,
+ * Yahoo, ...) normalizes into. The dashboard UI and projection logic only
+ * ever deal with these shapes, never with a platform's raw response.
+ *
+ * @typedef {'sleeper'|'espn'|'yahoo'} Platform
+ *
+ * @typedef {Object} League
+ * @property {string} id              `${platform}:${externalId}`
+ * @property {Platform} platform
+ * @property {string} externalId      platform's own league id
+ * @property {string} name
+ * @property {string} season          e.g. "2025"
+ * @property {string} scoringType     'ppr' | 'half_ppr' | 'standard' | 'custom'
+ * @property {number} totalRosters
+ * @property {string[]} rosterPositions  e.g. ['QB','RB','RB','WR','WR','TE','FLEX','DEF','K','BN','BN','BN','BN','BN','BN']
+ * @property {string} status          'pre_draft' | 'drafting' | 'in_season' | 'complete'
+ *
+ * @typedef {Object} Team
+ * @property {string} id              `${leagueId}:${externalId}`
+ * @property {string} leagueId
+ * @property {string} externalId      platform's own roster/team id
+ * @property {string} ownerName
+ * @property {string} teamName
+ * @property {number} wins
+ * @property {number} losses
+ * @property {number} ties
+ * @property {number} pointsFor
+ * @property {number} pointsAgainst
+ *
+ * @typedef {Object} Player
+ * @property {string} id              canonical id, Sleeper's player id preferred
+ * @property {Object} platformIds     { sleeper?, espn?, yahoo? }
+ * @property {string} fullName
+ * @property {string} position        'QB'|'RB'|'WR'|'TE'|'K'|'DEF'
+ * @property {string|null} nflTeam    NFL team abbreviation, null if free agent/retired
+ * @property {string} status          'Active'|'Injured Reserve'|'Out'|'Questionable'|...
+ * @property {number|null} age
+ * @property {number|null} yearsExp
+ *
+ * @typedef {Object} RosterSlot
+ * @property {string} leagueId
+ * @property {string} teamId
+ * @property {string} playerId
+ * @property {'starter'|'bench'|'ir'|'taxi'} slot
+ *
+ * @typedef {Object} Projection
+ * @property {string} playerId
+ * @property {string} leagueId        projections can be scoring-type dependent
+ * @property {string} season
+ * @property {number} week
+ * @property {number} projectedPoints
+ * @property {string|null} opponent   NFL team abbreviation, null on bye
+ * @property {boolean} bye
+ * @property {'custom'|'fantasypros'|'nflverse'} source
+ *
+ * @typedef {Object} Ranking
+ * @property {string} playerId
+ * @property {string} position
+ * @property {number} rank            rank within position
+ * @property {number|null} tier
+ * @property {string} source
+ * @property {string} asOf            ISO date
+ */
+
+/** @param {Platform} platform @param {string} externalId */
+export function leagueId(platform, externalId) {
+  return `${platform}:${externalId}`;
+}
+
+/** @param {string} leagueId @param {string} externalId */
+export function teamId(leagueId, externalId) {
+  return `${leagueId}:${externalId}`;
+}
+
+export const ROSTER_SLOT = /** @type {const} */ ({
+  STARTER: 'starter',
+  BENCH: 'bench',
+  IR: 'ir',
+  TAXI: 'taxi',
+});
+
+export const POSITIONS = /** @type {const} */ (['QB', 'RB', 'WR', 'TE', 'K', 'DEF']);
