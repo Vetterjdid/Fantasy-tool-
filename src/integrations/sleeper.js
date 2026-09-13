@@ -34,6 +34,43 @@ export async function fetchState() {
   return fetchJson('/state/nfl');
 }
 
+/**
+ * Resolve a Sleeper handle to an account. Accepts a username or a user_id.
+ *
+ * A username is a public handle, not a credential — Sleeper's API is
+ * unauthenticated and read-only, and there is no login endpoint to call. This
+ * is the whole of "signing in": we look up a public profile. Never add a
+ * password field for a third-party service.
+ *
+ * Sleeper answers an unknown username with 200 and a literal `null` body
+ * rather than a 404, so an unguarded caller would sail past the failure and
+ * only break later on `user.user_id`.
+ *
+ * @param {string} handle
+ * @returns {Promise<{user_id: string, username: string, display_name: string}>}
+ */
+export async function fetchUser(handle) {
+  const trimmed = String(handle ?? '').trim();
+  if (!trimmed) throw new Error('A Sleeper username is required.');
+  const user = await fetchJson(`/user/${encodeURIComponent(trimmed)}`);
+  if (!user || !user.user_id) {
+    throw new Error(`No Sleeper user named "${trimmed}". Check the spelling — it is the username, not the display name.`);
+  }
+  return user;
+}
+
+/**
+ * Every NFL league a user is in for a season. This is what makes multi-league
+ * real: one handle in, all leagues discovered, no league IDs to paste.
+ *
+ * @param {string} userId   Sleeper user_id (not the username)
+ * @param {string|number} season
+ */
+export async function fetchUserLeagues(userId, season) {
+  const leagues = await fetchJson(`/user/${encodeURIComponent(userId)}/leagues/nfl/${season}`);
+  return Array.isArray(leagues) ? leagues : [];
+}
+
 export async function fetchLeague(externalLeagueId) {
   return fetchJson(`/league/${externalLeagueId}`);
 }
@@ -110,6 +147,7 @@ export function normalizeTeams(rawRosters, rawUsers, internalLeagueId) {
       id: makeTeamId(internalLeagueId, String(roster.roster_id)),
       leagueId: internalLeagueId,
       externalId: String(roster.roster_id),
+      ownerId: roster.owner_id ?? null,
       ownerName: user?.display_name ?? 'Unknown Owner',
       teamName: user?.metadata?.team_name || user?.display_name || `Team ${roster.roster_id}`,
       wins: settings.wins ?? 0,
@@ -225,4 +263,42 @@ export async function loadLeague(externalLeagueId) {
   const teams = normalizeTeams(rawRosters, rawUsers, league.id);
   const rosterSlots = normalizeRosterSlots(rawRosters, league.id);
   return { league, teams, rosterSlots };
+}
+
+/**
+ * One handle in, every league out. This is the whole onboarding flow.
+ *
+ * Two real failure cases are surfaced rather than swallowed: a user in no
+ * leagues this season (a new account, or the wrong season), and a league where
+ * no roster is owned by this user — which happens when someone leaves a league
+ * mid-season but the league still lists them. Neither is an error worth
+ * aborting the other leagues for, so they come back as `identity: null` and
+ * the caller decides what to say.
+ *
+ * @param {string} handle  Sleeper username (or user_id)
+ * @param {string|number} season
+ */
+export async function loadAllLeagues(handle, season) {
+  const user = await fetchUser(handle);
+  const rawLeagues = await fetchUserLeagues(user.user_id, season);
+
+  const leagues = await Promise.all(
+    rawLeagues.map(async (raw) => {
+      const loaded = await loadLeague(raw.league_id);
+      const mine = loaded.teams.find((t) => t.ownerId === user.user_id);
+      return { ...loaded, myTeamId: mine ? mine.id : null };
+    })
+  );
+
+  return {
+    // Only these three fields. The /user response also contains null-valued
+    // `email`, `phone`, `token` and `cookies` keys; none of them may ever be
+    // carried into the artifact database, which every viewer can read.
+    identity: {
+      sleeperUserId: user.user_id,
+      sleeperUsername: user.username,
+      displayName: user.display_name,
+    },
+    leagues,
+  };
 }

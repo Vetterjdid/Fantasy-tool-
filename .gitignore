@@ -1,3 +1,6 @@
 node_modules/
 scripts/demo-data.json
 *.log
+
+# live league data — fetched, not source
+data/

@@ -6,7 +6,8 @@
   "description": "Multi-league fantasy football analysis dashboard, published as a live Claude Artifact.",
   "scripts": {
     "test": "node --test \"test/**/*.test.js\"",
-    "refresh:demo": "node scripts/build-demo-data.mjs"
+    "refresh:demo": "node scripts/build-demo-data.mjs",
+    "fetch:live": "node --use-env-proxy scripts/fetch-live.mjs"
   },
   "engines": {
     "node": ">=18"

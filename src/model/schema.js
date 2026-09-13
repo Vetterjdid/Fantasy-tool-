@@ -20,6 +20,10 @@
  * @property {string} id              `${leagueId}:${externalId}`
  * @property {string} leagueId
  * @property {string} externalId      platform's own roster/team id
+ * @property {string|null} ownerId    platform's own user id for the owner; this is
+ *                                    what resolves "which of these teams is mine",
+ *                                    per league — the same person can own a
+ *                                    different roster in every league they're in
  * @property {string} ownerName
  * @property {string} teamName
  * @property {number} wins

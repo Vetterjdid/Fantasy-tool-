@@ -20,6 +20,32 @@ export function slotsRequired(league) {
 }
 
 /**
+ * Lineup slots this team genuinely cannot fill, attributed to every position
+ * that could have filled them.
+ *
+ * This replaces an earlier definition that compared starters against
+ * `slotsRequired`, which is fractional because a FLEX slot is shared across
+ * the positions it accepts. In a QB/RB/RB/WR/WR/TE/FLEX league, RB demand is
+ * 2.33, so a team starting exactly two running backs always measured as 0.33
+ * "short" — and the team whose FLEX went to a receiver measured short at RB
+ * while its neighbour measured short at WR. Live data made this obvious:
+ * every one of twelve teams was short at two of three flex positions, so the
+ * weakness ranking was being driven by which position happened to win the
+ * FLEX rather than by any real hole.
+ *
+ * A shortfall now means what the words mean: an empty slot.
+ */
+export function shortfallByPosition(lineup) {
+  const out = {};
+  for (const { slot } of lineup.unfilled || []) {
+    for (const position of eligiblePositions(slot)) {
+      out[position] = (out[position] || 0) + 1;
+    }
+  }
+  return out;
+}
+
+/**
  * @returns per-position strength, exposure, injury risk and surplus for one team.
  */
 export function teamProfile({ team, roster, league, valueFor, rosFor, levels, weeks }) {
@@ -27,6 +53,7 @@ export function teamProfile({ team, roster, league, valueFor, rosFor, levels, we
   const lineup = optimalLineup(active, league.rosterPositions, valueFor);
   const starting = new Set(lineup.assignments.map((a) => a.playerId));
   const required = slotsRequired(league);
+  const shortfalls = shortfallByPosition(lineup);
 
   const positions = new Set([
     ...Object.keys(required),
@@ -62,7 +89,7 @@ export function teamProfile({ team, roster, league, valueFor, rosFor, levels, we
       starterStrength,
       starterCount: starters.length,
       slotsRequired: required[position] || 0,
-      shortfall: Math.max(0, Math.round(((required[position] || 0) - starters.length) * 100) / 100),
+      shortfall: shortfalls[position] || 0,
       exposure,
       risk,
       surplus: surplusPlayers.reduce((sum, e) => sum + e.over, 0),
