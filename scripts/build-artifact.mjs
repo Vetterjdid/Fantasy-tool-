@@ -31,6 +31,7 @@ const MODULES = [
   'src/analysis/roster.js',
   'src/analysis/profile.js',
   'src/analysis/explain.js',
+  'src/analysis/waivers.js',
   'src/analysis/trades.js',
   'src/analysis/index.js',
 ];
@@ -97,8 +98,36 @@ function assertNoCollisions(modules) {
   }
 }
 
+/**
+ * Every module the bundled set imports or re-exports must itself be bundled.
+ *
+ * Forgetting to add a new file to MODULES does not fail the build on its own —
+ * the concatenation is happily valid JavaScript that simply never declares the
+ * missing functions, so the page ships and then dies the moment a view calls
+ * one. That is a browser-only failure for a mistake visible right here.
+ */
+function assertNoMissingModules(rawSources) {
+  const bundled = new Set(MODULES);
+  const missing = [];
+  for (const [rel, source] of rawSources) {
+    const dir = rel.slice(0, rel.lastIndexOf('/'));
+    for (const match of source.matchAll(/\bfrom\s+['"](\.[^'"]+)['"]/g)) {
+      const resolved = new URL(match[1], 'file:///' + dir + '/').pathname.replace(/^\//, '');
+      if (!bundled.has(resolved)) missing.push(`${rel} references ${match[1]} (${resolved})`);
+    }
+  }
+  if (missing.length) {
+    throw new Error(
+      'These modules are imported but not in the bundle, so the page would call functions that do not exist:\n  ' +
+      missing.join('\n  ') + '\nAdd them to MODULES, in dependency order.'
+    );
+  }
+}
+
 function bundleEngine() {
-  const modules = MODULES.map((rel) => [rel, stripModuleSyntax(readFileSync(join(ROOT, rel), 'utf8'))]);
+  const raw = MODULES.map((rel) => [rel, readFileSync(join(ROOT, rel), 'utf8')]);
+  assertNoMissingModules(raw);
+  const modules = raw.map(([rel, source]) => [rel, stripModuleSyntax(source)]);
   assertNoCollisions(modules);
   return modules.map(([rel, source]) => `// ===== ${rel} =====\n${source}`).join('\n');
 }

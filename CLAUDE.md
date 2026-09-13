@@ -11,10 +11,10 @@ this file is current.
 | 1 | Analysis engine (`src/analysis/`) | **Done** |
 | 2 | Sleeper username → league discovery → identity | **Done**, verified against live responses |
 | 3 | Build step bundling `src/analysis/*` into the artifact | **Done** (`scripts/build-artifact.mjs`) |
-| 4 | Views: My Team, League, Trade Finder, Saved | **Done** |
+| 4 | Views: My Team, League, Waivers, Trade Finder, Saved | **Done** |
 | 5 | Real Sleeper data | **Done** — running on three live leagues |
 
-71 tests pass. Branch: `claude/live-artifact-tool-um585n`. Run `npm test` before
+82 tests pass. Branch: `claude/live-artifact-tool-um585n`. Run `npm test` before
 trusting anything.
 
 Not done: refresh is manual. `npm run fetch:live <username>` re-pulls the data,
@@ -44,7 +44,11 @@ at build time:
 
 The bundle is a flat concatenation sharing one scope, so **two modules may not
 declare the same top-level name**. The build fails loudly on a collision rather
-than shipping a page that dies whole in the browser.
+than shipping a page that dies whole in the browser. It also fails when a
+bundled module imports one that is not in `MODULES`: adding a file to
+`src/analysis/` and forgetting the bundler list produces perfectly valid
+JavaScript that simply never declares those functions, so the page ships and
+dies the first time a view calls one.
 
 Only the artifact `db` is live at runtime: it stores each league's saved and
 dismissed trades under `tradeboard/<leagueId>`, mirrored to `localStorage`.
@@ -118,6 +122,19 @@ Corollaries worth keeping in mind before changing anything in `src/analysis/`:
   "short", and every team in every league read as short at two of three flex
   positions.
 - Guard `SD === 0` before computing z-scores.
+- **Reserve players are never drop candidates on the waiver wire.** IR carries
+  an availability factor of zero, so an injured star's rest-of-season value is
+  zero, so dropping him looks free — a recommender trusting that arithmetic
+  advises cutting your best injured player every week. The value of an IR stash
+  is that he returns, which this horizon does not model.
+- **K and DEF are browsable but never recommended.** The baseline gives every
+  kicker the same number and every defense the same number, so ranking them
+  would be ranking noise.
+- **Sleeper's `waiver_type` enum is undocumented** and these leagues do not all
+  use the same value (0, 0, 1). `waiver_position` is ground truth for the
+  current order and is displayed; the reordering rule is deliberately NOT named,
+  because asserting "reverse standings" would be an unverifiable claim shown as
+  fact. `docs.sleeper.com` is not on the egress allowlist, only `api.sleeper.app`.
 
 ## UI notes
 
@@ -131,6 +148,11 @@ ARIA attributes need the literal strings `"true"`/`"false"`; the `el()` helper's
 boolean-attribute shorthand (correct for `disabled`, `open`) silently breaks
 `[aria-selected="true"]` selectors, which is how the league tabs once lost their
 selected state.
+
+Waiver pickups and trade suggestions both need variety capping, for the same
+reason: ranked purely by gain, every free tight end that beats your worst one
+fills the list with eight ways to say "add a tight end". Two per position
+(waivers) and two per manager (trades).
 
 Trade suggestions are ordered for variety, not filtered: best two per manager
 first, then the rest by rank. A hard per-manager cap looks reasonable and leaves

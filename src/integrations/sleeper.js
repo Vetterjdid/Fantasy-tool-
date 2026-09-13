@@ -121,6 +121,13 @@ export function normalizeLeague(raw) {
     totalRosters: raw.total_rosters,
     rosterPositions: raw.roster_positions ?? [],
     status: raw.status,
+    // Carried through unmapped on purpose: Sleeper's public docs do not define
+    // the waiver_type enum, and guessing it would put an unverifiable claim
+    // ("reverse standings") in front of the user as if it were fact.
+    waiverType: raw.settings?.waiver_type ?? null,
+    waiverBudget: raw.settings?.waiver_budget ?? null,
+    waiverDayOfWeek: raw.settings?.waiver_day_of_week ?? null,
+    waiverClearDays: raw.settings?.waiver_clear_days ?? null,
   };
 }
 
@@ -155,6 +162,8 @@ export function normalizeTeams(rawRosters, rawUsers, internalLeagueId) {
       ties: settings.ties ?? 0,
       pointsFor: (settings.fpts ?? 0) + (settings.fpts_decimal ?? 0) / 100,
       pointsAgainst: (settings.fpts_against ?? 0) + (settings.fpts_against_decimal ?? 0) / 100,
+      waiverPosition: settings.waiver_position ?? null,
+      waiverBudgetUsed: settings.waiver_budget_used ?? 0,
     };
   });
 }

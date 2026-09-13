@@ -15,6 +15,13 @@
  * @property {number} totalRosters
  * @property {string[]} rosterPositions  e.g. ['QB','RB','RB','WR','WR','TE','FLEX','DEF','K','BN','BN','BN','BN','BN','BN']
  * @property {string} status          'pre_draft' | 'drafting' | 'in_season' | 'complete'
+ * @property {number|null} waiverType   Sleeper's raw `waiver_type`. Its enum is NOT
+ *                                      documented in the public API docs, so it is
+ *                                      carried through unmapped — display it as
+ *                                      unverified rather than naming a system.
+ * @property {number|null} waiverBudget FAAB budget, if the league runs one
+ * @property {number|null} waiverDayOfWeek raw; the weekday base is likewise unverified
+ * @property {number|null} waiverClearDays days a claim sits before processing
  *
  * @typedef {Object} Team
  * @property {string} id              `${leagueId}:${externalId}`
@@ -31,6 +38,13 @@
  * @property {number} ties
  * @property {number} pointsFor
  * @property {number} pointsAgainst
+ * @property {number|null} waiverPosition  1 = first claim. Sleeper reports this for
+ *                                         every roster and it is ground truth for the
+ *                                         CURRENT order; how it reorders after a claim
+ *                                         depends on the league's waiver type.
+ * @property {number} waiverBudgetUsed     FAAB spent so far (0 in a non-FAAB league,
+ *                                         and also 0 before anyone has bid — the two
+ *                                         are indistinguishable early in a season)
  *
  * @typedef {Object} Player
  * @property {string} id              canonical id, Sleeper's player id preferred

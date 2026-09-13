@@ -21,6 +21,7 @@ export * from './value.js';
 export * from './profile.js';
 export * from './roster.js';
 export * from './explain.js';
+export * from './waivers.js';
 export { findTrades } from './trades.js';
 
 /**

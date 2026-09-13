@@ -143,6 +143,12 @@
   .tagline.nodata { color: var(--ink-3); border-color: var(--line); }
   .tagline.starts { color: var(--good); border-color: color-mix(in oklab, var(--good) 45%, transparent); }
   .prow.dim .pname, .prow.dim .ppts { color: var(--ink-2); }
+  .wpos {
+    flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
+    font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-2);
+    background: var(--sunk); border: 1px solid var(--line);
+  }
+  .wpos.me { background: var(--rb); color: #042; border-color: var(--rb); font-weight: 700; }
   .prow.gap .pname { color: var(--warm); font-style: italic; font-weight: 600; }
 
   /* ---------- diverging strength bars ---------- */
@@ -289,6 +295,7 @@
   <nav class="tabs" id="tabs" role="tablist" aria-label="Views">
     <button class="tab" id="tab-team" role="tab" aria-selected="true" aria-controls="view-team">My Team</button>
     <button class="tab" id="tab-league" role="tab" aria-selected="false" aria-controls="view-league">League</button>
+    <button class="tab" id="tab-waivers" role="tab" aria-selected="false" aria-controls="view-waivers">Waivers</button>
     <button class="tab" id="tab-trades" role="tab" aria-selected="false" aria-controls="view-trades">Trade Finder</button>
     <button class="tab" id="tab-saved" role="tab" aria-selected="false" aria-controls="view-saved">Saved</button>
   </nav>
@@ -296,6 +303,7 @@
   <main>
     <section class="view" id="view-team" role="tabpanel" aria-labelledby="tab-team"></section>
     <section class="view" id="view-league" role="tabpanel" aria-labelledby="tab-league" hidden></section>
+    <section class="view" id="view-waivers" role="tabpanel" aria-labelledby="tab-waivers" hidden></section>
     <section class="view" id="view-trades" role="tabpanel" aria-labelledby="tab-trades" hidden></section>
     <section class="view" id="view-saved" role="tabpanel" aria-labelledby="tab-saved" hidden></section>
   </main>
@@ -647,6 +655,120 @@
         el("p", { class: "note", text: "Sorted by best possible lineup. Each cell is that team's starters at the position, against the rest of the league." }))));
   }
 
+  // ---------- view: waivers ----------
+  let waiverFilter = "ALL";
+
+  function renderWaivers() {
+    const host = $("#view-waivers");
+    const ctx = context(activeLeague);
+    const snap = current().snap;
+    const profile = myProfile();
+    host.replaceChildren();
+
+    // --- waiver order: real data, and the only part of this that is certain ---
+    const { order, complete, budgetInUse } = waiverOrder(snap.teams);
+    const orderPanel = el("div", { class: "panel" }, el("h2", { text: "Waiver order" }),
+      el("div", { class: "body" },
+        complete
+          ? order.map((team) => {
+              const mine = team.id === snap.myTeamId;
+              return el("div", { class: "prow" + (mine ? "" : " dim") },
+                el("span", { class: "wpos" + (mine ? " me" : ""), text: "#" + team.waiverPosition }),
+                el("span", { class: "pmain" },
+                  el("span", { class: "pname", text: team.teamName }),
+                  el("span", { class: "pmeta" }, el("span", { text: team.ownerName }))),
+                budgetInUse
+                  ? el("span", { class: "ppts num", text: "$" + (team.waiverBudgetUsed || 0) })
+                  : null);
+            })
+          : el("p", { class: "note", text: "Sleeper did not report a waiver position for every roster in this league, so there is no complete order to show." }),
+        el("p", { class: "note", text:
+          "#1 has the first claim. This is the order Sleeper reports right now. How it reorders after " +
+          "a claim depends on your league's waiver setting, which Sleeper does not document publicly — " +
+          "check the league settings in the Sleeper app if it matters for timing." })));
+
+    if (!profile) {
+      host.append(el("div", { style: "padding-top:16px" }, orderPanel));
+      return;
+    }
+
+    // --- should I drop someone for someone? ---
+    // Ranked purely by gain, this list becomes eight ways to say the same
+    // thing — every free tight end beats your worst one, so eight tight ends
+    // fill it. Two per position keeps the real alternatives visible.
+    const perPosition = new Map();
+    const { moves } = waiverMoves(ctx, profile.teamId, { limit: 40 });
+    const topMoves = moves.filter((move) => {
+      const seen = perPosition.get(move.add.position) || 0;
+      if (seen >= 2) return false;
+      perPosition.set(move.add.position, seen + 1);
+      return true;
+    }).slice(0, 6);
+    const movesPanel = el("div", { class: "panel" },
+      el("h2", { text: "Worth picking up" }),
+      el("div", { class: "body" },
+        topMoves.length
+          ? topMoves.map((move) => swapCard(move))
+          : el("p", { class: "note", text:
+              "Nobody on the wire improves your starting lineup. That is a real answer, not an empty " +
+              "one — your bench is already better than what is free." }),
+        el("p", { class: "note", text:
+          "Every pickup is an add and a drop, because your roster is full. " +
+          "Players on injured reserve are never offered as the drop: this horizon scores them at zero " +
+          "because they are out now, which would make cutting your injured best player look free." })));
+
+    // --- browse the wire ---
+    const { board } = waiverBoard(ctx, profile.teamId, { perPosition: 12 });
+    const positions = ["ALL", "QB", "RB", "WR", "TE", "K", "DEF"];
+    const filtered = waiverFilter === "ALL" ? board.slice(0, 25) : board.filter((e) => e.position === waiverFilter);
+
+    const filterRow = el("div", { class: "seg", style: "margin-bottom:10px" }, positions.map((pos) =>
+      el("button", { "aria-pressed": pos === waiverFilter,
+        onclick: () => { waiverFilter = pos; renderWaivers(); } }, pos === "ALL" ? "All" : pos)));
+
+    const boardPanel = el("div", { class: "panel" },
+      el("h2", { text: "Best available" }),
+      el("div", { class: "body" }, filterRow,
+        filtered.length
+          ? filtered.map((entry) => playerRow(
+              { fullName: entry.name, position: entry.position, nflTeam: entry.nflTeam, status: entry.status },
+              entry.ros,
+              { quality: entry.quality, dim: !entry.wouldStart,
+                after: entry.mvIn > 0 ? "would add " + n0(entry.mvIn) + " to your lineup" : "would not start for you" }))
+          : el("p", { class: "note", text: "No free agents at this position with a projection." }),
+        el("p", { class: "note", text:
+          "Sorted by what each would add to YOUR lineup, then by rest-of-season points. Most free agents " +
+          "add nothing — that is not a bug, it is what a full roster means." })));
+
+    host.append(el("div", { class: "split" },
+      el("div", {}, movesPanel, boardPanel),
+      el("div", {}, orderPanel)));
+  }
+
+  function swapCard(move) {
+    const card = el("details", { class: "offer" });
+    card.append(el("summary", {},
+      el("div", { class: "head" },
+        el("div", { class: "swap" },
+          el("span", { class: "in", text: "Add " + move.add.name }),
+          el("span", { class: "arrow", text: "·" }),
+          el("span", { class: "out", text: "drop " + move.drop.name })),
+        el("div", { class: "pmeta", style: "margin-top:4px" },
+          el("span", { text: move.add.position + " " + (move.add.nflTeam || "FA") }),
+          el("span", { text: "· " + move.drop.name + " costs you " + n0(move.drop.marginalCost) }))),
+      el("div", { class: "gains" },
+        el("div", { class: "g mine" }, el("span", { class: "eyebrow", text: "lineup" }),
+          el("b", { text: "+" + n1(move.gain) })))));
+
+    card.append(el("div", { class: "ledger" },
+      el("span", { class: "eyebrow", text: "Where the gain comes from" }),
+      move.lineupChanges.map((change) => el("div", { class: "row" },
+        el("span", { class: "slotname", text: change.slot }),
+        el("span", {}, change.to || "nobody", change.from ? " replaces " + change.from : " fills an empty slot"),
+        el("span", { class: "d " + (change.delta >= 0 ? "up" : "down"), text: signed(change.delta, 1) })))));
+    return card;
+  }
+
   // ---------- trade finder ----------
   const BATCH = 6;
 
@@ -931,7 +1053,7 @@
     savedTab.replaceChildren(document.createTextNode("Saved"));
     if (savedCount) savedTab.append(el("span", { class: "count", text: String(savedCount) }));
 
-    for (const view of ["team", "league", "trades", "saved"]) {
+    for (const view of ["team", "league", "waivers", "trades", "saved"]) {
       $("#tab-" + view).setAttribute("aria-selected", String(view === activeView));
       $("#view-" + view).hidden = view !== activeView;
     }
@@ -953,12 +1075,13 @@
     renderChrome();
     if (activeView === "team") renderTeam();
     else if (activeView === "league") renderLeague();
+    else if (activeView === "waivers") renderWaivers();
     else if (activeView === "trades") renderTrades();
     else renderSaved();
     renderChrome();   // league ranks need the context the view just built
   }
 
-  for (const view of ["team", "league", "trades", "saved"]) {
+  for (const view of ["team", "league", "waivers", "trades", "saved"]) {
     $("#tab-" + view).addEventListener("click", () => { activeView = view; render(); });
   }
   window.addEventListener("scroll", hideTip, { passive: true });

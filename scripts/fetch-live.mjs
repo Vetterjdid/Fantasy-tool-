@@ -102,8 +102,8 @@ async function main() {
       scoringType: league.scoringType,
     });
 
-    // Keep the best 20 free agents per position: enough for an honest
-    // replacement level and a useful waiver view, small enough to ship.
+    // Keep the best 30 free agents per position: enough for an honest
+    // replacement level and a browsable waiver board, small enough to ship.
     const byPosition = new Map();
     for (const row of waiverProjections) {
       const player = catalog[row.playerId];
@@ -114,7 +114,7 @@ async function main() {
     const keptWaiver = [];
     for (const rows of byPosition.values()) {
       rows.sort((a, b) => b.projectedPoints - a.projectedPoints);
-      keptWaiver.push(...rows.slice(0, 20));
+      keptWaiver.push(...rows.slice(0, 30));
     }
 
     const projections = rosteredProjections.concat(keptWaiver);
