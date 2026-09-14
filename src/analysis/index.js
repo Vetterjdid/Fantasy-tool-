@@ -7,6 +7,7 @@
  */
 
 import { rosterFor, availablePlayers } from './roster.js';
+import { declaredLineup } from './lineup.js';
 import {
   remainingWeeks,
   restOfSeasonValues,
@@ -62,6 +63,8 @@ export function buildContext({
     projectionFor: (p) => projectionByPlayer.get(p.id),
     rankingFor: (p) => rankingByPlayer.get(p.id),
     weeks,
+    currentWeek,
+    endWeek,
   });
 
   const entryFor = (player) => values.get(player.id) || { ros: null, quality: 'missing' };
@@ -73,6 +76,8 @@ export function buildContext({
   // start, which is the honest floor. Trade code filters them out separately.
   const valueFor = (player) => rosFor(player) || 0;
   const quality = (player) => entryFor(player).quality;
+  const byeWeekFor = (player) => entryFor(player).byeWeek ?? null;
+  const gamesFor = (player) => entryFor(player).games ?? weeks;
 
   const rosters = new Map();
   const reserveIds = new Set();
@@ -81,6 +86,30 @@ export function buildContext({
     rosters.set(team.id, roster);
     roster.reserve.forEach((p) => reserveIds.add(p.id));
   }
+
+  // The lineup each manager actually set. Sleeper's `starters` array is
+  // positional, so `lineupSlot` is an index into the league's scoring slots.
+  const lineupSlotByTeam = new Map();
+  for (const slot of rosterSlots || []) {
+    if (typeof slot.lineupSlot !== 'number') continue;
+    if (!lineupSlotByTeam.has(slot.teamId)) lineupSlotByTeam.set(slot.teamId, new Map());
+    lineupSlotByTeam.get(slot.teamId).set(slot.playerId, slot.lineupSlot);
+  }
+  // Snapshots taken before lineup order was captured have none of this. Callers
+  // check this rather than rendering an empty lineup as though it were real.
+  const hasDeclaredLineups = lineupSlotByTeam.size > 0;
+
+  const declaredFor = (teamId) => {
+    const roster = rosters.get(teamId);
+    if (!roster || !lineupSlotByTeam.has(teamId)) return null;
+    const map = lineupSlotByTeam.get(teamId);
+    return declaredLineup(
+      roster.active,
+      league.rosterPositions,
+      valueFor,
+      (playerId) => (map.has(playerId) ? map.get(playerId) : null)
+    );
+  };
 
   const available = availablePlayers(playersById, rosterSlots);
   const levels = replacementLevels({ league, allPlayers, available, rosFor });
@@ -111,6 +140,10 @@ export function buildContext({
     rosFor,
     vor,
     quality,
+    byeWeekFor,
+    gamesFor,
+    declaredFor,
+    hasDeclaredLineups,
     projectionFor: (p) => projectionByPlayer.get(p.id),
   };
 }

@@ -143,6 +143,14 @@
   .tagline.nodata { color: var(--ink-3); border-color: var(--line); }
   .tagline.starts { color: var(--good); border-color: color-mix(in oklab, var(--good) 45%, transparent); }
   .prow.dim .pname, .prow.dim .ppts { color: var(--ink-2); }
+  .tagline.bye { color: var(--ink-3); border-color: var(--line); }
+  .tagline.sit { color: var(--warm); border-color: color-mix(in oklab, var(--warm) 45%, transparent); }
+  /* A clickable lineup row has to look clickable, and the selected one has to
+     be obvious enough to survive a second tap landing somewhere unexpected. */
+  .prow[data-pick] { cursor: pointer; border-radius: 10px; padding-inline: 8px; margin-inline: -8px; }
+  .prow[data-pick]:hover { background: var(--raise-2); }
+  .prow.picked { background: color-mix(in oklab, var(--rb) 16%, var(--raise-2)); }
+  .prow.picked .pname { color: var(--ink); }
   .wpos {
     flex: none; width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center;
     font-family: var(--mono); font-size: 12px; font-weight: 600; color: var(--ink-2);
@@ -494,8 +502,11 @@
     chip.style.background = posColor(player.position);
     meta.append(chip, el("span", { text: player.nflTeam || "FA" }));
     if (isHurt(player.status)) meta.append(el("span", { class: "tagline hurt", text: shortStatus(player.status) }));
+    if (typeof opts.bye === "number") meta.append(el("span", { class: "tagline bye", text: "BYE " + opts.bye }));
     if (opts.quality === "missing") meta.append(el("span", { class: "tagline nodata", text: "no 2025 data" }));
     if (opts.starts) meta.append(el("span", { class: "tagline starts", text: "starts" }));
+    if (opts.startMe) meta.append(el("span", { class: "tagline starts", text: "start him" }));
+    if (opts.benchMe) meta.append(el("span", { class: "tagline sit", text: "sit him" }));
     if (opts.after) meta.append(el("span", { text: opts.after }));
 
     return el("div", { class: "prow" + (opts.dim ? " dim" : "") },
@@ -521,6 +532,88 @@
   }
 
   // ---------- view: my team ----------
+  // Per-league, session-only lineup edits: slotIndex -> playerId. Sleeper is the
+  // source of truth for a lineup, so a persisted local copy would quietly go
+  // stale against it; these are a sandbox, and they reset on reload.
+  const lineupEdits = new Map();
+  let selected = null;        // {kind:'slot', index} | {kind:'bench', playerId}
+  let lineupView = 'mine';    // 'mine' | 'best'
+
+  function scoringSlotList() {
+    return current().snap.league.rosterPositions
+      .map((slot, i) => ({ slot, i }))
+      .filter(({ slot }) => isScoringSlot(slot));
+  }
+
+  /** The lineup as currently shown: edits if any, otherwise what Sleeper has. */
+  function workingLineup(ctx, profile) {
+    const leagueId = currentLeagueId();
+    if (lineupEdits.has(leagueId)) return lineupEdits.get(leagueId);
+    const declared = ctx.declaredFor(profile.teamId);
+    const map = new Map();
+    if (declared) for (const a of declared.assignments) map.set(a.slotIndex, a.playerId);
+    return map;
+  }
+  const isEdited = () => lineupEdits.has(currentLeagueId());
+  function setLineup(map) {
+    lineupEdits.set(currentLeagueId(), map);
+    selected = null;
+    render();
+  }
+  function lineupValue(ctx, map) {
+    let total = 0;
+    for (const playerId of map.values()) {
+      const player = ctx.playersById[playerId];
+      if (player) total += ctx.valueFor(player) || 0;
+    }
+    return total;
+  }
+
+  /** Click one player then another to swap them. Eligibility is enforced. */
+  function pick(ctx, target) {
+    const profile = myProfile();
+    const map = new Map(workingLineup(ctx, profile));
+    const slots = current().snap.league.rosterPositions;
+
+    if (!selected) {
+      selected = target;
+      render();
+      return;
+    }
+    if (selected.kind === target.kind &&
+        (selected.index === target.index || selected.playerId === target.playerId)) {
+      selected = null; render(); return;   // clicking the same thing cancels
+    }
+
+    const occupantOf = (t) => (t.kind === 'slot' ? map.get(t.index) || null : t.playerId);
+    const a = selected;
+    const b = target;
+    const playerA = occupantOf(a);
+    const playerB = occupantOf(b);
+    const posOf = (id) => (id && ctx.playersById[id] ? ctx.playersById[id].position : null);
+
+    const fits = (slotIndex, playerId) =>
+      playerId === null || canFill(slots[slotIndex], posOf(playerId));
+
+    if (a.kind === 'slot' && b.kind === 'slot') {
+      if (!fits(a.index, playerB) || !fits(b.index, playerA)) {
+        toast('Those two cannot swap slots'); selected = null; render(); return;
+      }
+      const put = (index, playerId) => (playerId === null ? map.delete(index) : map.set(index, playerId));
+      put(a.index, playerB);
+      put(b.index, playerA);
+    } else {
+      const slotSide = a.kind === 'slot' ? a : b;
+      const benchSide = a.kind === 'slot' ? b : a;
+      if (!fits(slotSide.index, benchSide.playerId)) {
+        toast(posOf(benchSide.playerId) + ' cannot play ' + slots[slotSide.index]);
+        selected = null; render(); return;
+      }
+      map.set(slotSide.index, benchSide.playerId);   // whoever was there is benched
+    }
+    setLineup(map);
+  }
+
   function renderTeam() {
     const host = $("#view-team");
     const ctx = context(activeLeague);
@@ -538,49 +631,147 @@
     const weak = weakSpots(profile);
     const chips = tradeChips(profile);
     const rank = standings(ctx).findIndex((p) => p.teamId === profile.teamId) + 1;
-    const worst = weak[0];
+    const best = profile.lineup;
+    const map = workingLineup(ctx, profile);
+    const mineTotal = lineupValue(ctx, map);
+    const gap = best.total - mineTotal;
+    const hasDeclared = ctx.hasDeclaredLineups && ctx.declaredFor(profile.teamId);
 
     host.append(el("div", { class: "facts" },
-      el("div", { class: "fact" }, el("span", { class: "eyebrow", text: "Best lineup" }),
-        el("div", { class: "v num" }, n0(profile.total), " ", el("small", { text: "pts" }))),
-      el("div", { class: "fact" }, el("span", { class: "eyebrow", text: "League rank" }),
-        el("div", { class: "v" }, ordinal(rank), " ", el("small", { text: "of " + ctx.teams.length }))),
-      el("div", { class: "fact" }, el("span", { class: "eyebrow", text: "Thinnest spot" }),
-        el("div", { class: "v" }, worst ? worst.position : "—", " ",
-          el("small", { class: "num", text: worst ? signed(worst.z || 0, 2) : "" })))));
+      el("div", { class: "fact" },
+        el("span", { class: "eyebrow", text: isEdited() ? "Your lineup (edited)" : "Your lineup" }),
+        el("div", { class: "v num" }, n0(mineTotal), " ", el("small", { text: "pts" }))),
+      el("div", { class: "fact" }, el("span", { class: "eyebrow", text: "Best possible" }),
+        el("div", { class: "v num" }, n0(best.total), " ", el("small", { text: "pts" }))),
+      el("div", { class: "fact" },
+        el("span", { class: "eyebrow", text: gap > 0.5 ? "Left on your bench" : "League rank" }),
+        el("div", { class: "v num" }, gap > 0.5 ? "+" + n0(gap) : ordinal(rank), " ",
+          el("small", { text: gap > 0.5 ? "pts" : "of " + ctx.teams.length })))));
 
-    const assigned = new Map(profile.lineup.assignments.map((a) => [a.slotIndex, a]));
-    const lineupRows = current().snap.league.rosterPositions
-      .map((slot, i) => ({ slot, i }))
-      .filter(({ slot }) => isScoringSlot(slot))
-      .map(({ slot, i }) => {
-        const a = assigned.get(i);
-        if (!a) {
-          return el("div", { class: "prow gap" },
-            el("span", { class: "slot", text: slot }),
-            el("span", { class: "av empty", text: "—" }),
-            el("span", { class: "pmain" }, el("span", { class: "pname", text: "nobody eligible" })),
-            el("span", { class: "ppts num", text: "0" }));
-        }
-        const player = ctx.playersById[a.playerId];
-        return playerRow(player, a.value, { slot, quality: ctx.quality(player) });
+    // --- which players differ, as a SET. Two running backs trading RB1 for RB2
+    // --- is not a lineup change, and reporting it as one is noise.
+    const startingNow = new Set([...map.values()]);
+    const startingBest = new Set(best.assignments.map((a) => a.playerId));
+    const benchThese = [...startingNow].filter((id) => !startingBest.has(id));
+    const startThese = [...startingBest].filter((id) => !startingNow.has(id));
+
+    const toggle = el("div", { class: "seg" },
+      el("button", { "aria-pressed": lineupView === "mine",
+        onclick: () => { lineupView = "mine"; selected = null; render(); } },
+        isEdited() ? "Edited" : "Yours"),
+      el("button", { "aria-pressed": lineupView === "best",
+        onclick: () => { lineupView = "best"; selected = null; render(); } }, "Best possible"));
+
+    const controls = el("div", { class: "toolbar", style: "padding-top:14px" }, toggle);
+    if (lineupView === "mine" && startThese.length) {
+      controls.append(el("button", { class: "ghost", onclick: () => {
+        const next = new Map(best.assignments.map((a) => [a.slotIndex, a.playerId]));
+        setLineup(next);
+        toast("Lineup set to the best available");
+      } }, "Use the best lineup"));
+    }
+    if (isEdited()) {
+      controls.append(el("button", { class: "ghost", onclick: () => {
+        lineupEdits.delete(currentLeagueId()); selected = null; render();
+        toast("Back to your Sleeper lineup");
+      } }, "Reset to Sleeper"));
+    }
+
+    // --- the lineup itself ---
+    const showing = lineupView === "best"
+      ? new Map(best.assignments.map((a) => [a.slotIndex, a.playerId]))
+      : map;
+    const editable = lineupView === "mine";
+
+    const rows = scoringSlotList().map(({ slot, i }) => {
+      const playerId = showing.get(i);
+      const player = playerId ? ctx.playersById[playerId] : null;
+      const isSelected = editable && selected && selected.kind === "slot" && selected.index === i;
+
+      if (!player) {
+        const row = el("div", { class: "prow gap" + (isSelected ? " picked" : ""),
+          "data-pick": editable ? true : null,
+          onclick: editable ? () => pick(ctx, { kind: "slot", index: i }) : null },
+          el("span", { class: "slot", text: slot }),
+          el("span", { class: "av empty", text: "—" }),
+          el("span", { class: "pmain" }, el("span", { class: "pname", text: "empty" })),
+          el("span", { class: "ppts num", text: "0" }));
+        return row;
+      }
+      const row = playerRow(player, ctx.valueFor(player), {
+        slot, quality: ctx.quality(player), bye: ctx.byeWeekFor(player),
+        benchMe: editable && benchThese.includes(playerId),
       });
+      if (isSelected) row.classList.add("picked");
+      if (editable) {
+        row.setAttribute("data-pick", "");
+        row.addEventListener("click", () => pick(ctx, { kind: "slot", index: i }));
+      }
+      return row;
+    });
 
-    const starting = new Set(profile.lineup.assignments.map((a) => a.playerId));
-    const roster = ctx.rosters.get(profile.teamId);
-    const bench = roster.all.filter((p) => !starting.has(p.id))
+    const benchIds = new Set(ctx.rosters.get(profile.teamId).all.map((p) => p.id));
+    for (const id of showing.values()) benchIds.delete(id);
+    const bench = [...benchIds].map((id) => ctx.playersById[id]).filter(Boolean)
       .sort((a, b) => (ctx.rosFor(b) || 0) - (ctx.rosFor(a) || 0));
 
-    const left = el("div", {},
-      el("div", { class: "panel" }, el("h2", { text: "Starting lineup" }),
-        el("div", { class: "body" }, lineupRows)),
+    const benchRows = bench.map((player) => {
+      const isSelected = editable && selected && selected.kind === "bench" && selected.playerId === player.id;
+      const row = playerRow(player, ctx.rosFor(player), {
+        slot: ctx.reserveIds.has(player.id) ? "IR" : "BN", dim: true,
+        quality: ctx.quality(player), bye: ctx.byeWeekFor(player),
+        startMe: editable && startThese.includes(player.id),
+      });
+      if (isSelected) row.classList.add("picked");
+      // Reserve players cannot be started, so they are not swap targets.
+      if (editable && !ctx.reserveIds.has(player.id)) {
+        row.setAttribute("data-pick", "");
+        row.addEventListener("click", () => pick(ctx, { kind: "bench", playerId: player.id }));
+      }
+      return row;
+    });
+
+    const left = el("div", {}, controls,
+      el("div", { class: "panel", style: "margin-top:12px" },
+        el("h2", { text: lineupView === "best" ? "Best possible lineup" : "Your starting lineup" }),
+        el("div", { class: "body" }, rows,
+          !hasDeclared
+            ? el("p", { class: "note", text:
+                "This snapshot predates lineup tracking, so this is the best possible lineup rather than the one you set. Re-run the data fetch to see yours." })
+            : lineupView === "mine"
+              ? el("p", { class: "note", text: editable
+                  ? "Tap a player, then tap another to swap them. Changes here are a sandbox — they are not sent to Sleeper, and they reset when you reload."
+                  : "" })
+              : el("p", { class: "note", text: "What the solver would start. Your own lineup is the other tab." }))),
       el("div", { class: "panel" }, el("h2", { text: "Bench · " + bench.length }),
-        el("div", { class: "body" },
-          bench.map((p) => playerRow(p, ctx.rosFor(p), { slot: "BN", dim: true, quality: ctx.quality(p) })),
+        el("div", { class: "body" }, benchRows.length ? benchRows
+          : el("p", { class: "note", text: "Every player you own is in the lineup." }),
           el("p", { class: "note", text:
             "A bench player is worth nothing to your lineup until someone ahead of him is gone — which is exactly what makes him tradeable." }))));
 
-    const right = el("div", {},
+    // --- right rail ---
+    const swapPanel = startThese.length
+      ? el("div", { class: "panel" }, el("h2", { text: "Free points" }),
+          el("div", { class: "body" },
+            el("p", { class: "note", style: "margin-top:0" },
+              "Your lineup gives up ", el("b", { text: n0(gap) + " points" }),
+              " against the best you could field. Unlike a trade, this costs nothing."),
+            startThese.map((id) => {
+              const player = ctx.playersById[id];
+              return playerRow(player, ctx.rosFor(player), {
+                quality: ctx.quality(player), bye: ctx.byeWeekFor(player), startMe: true });
+            }),
+            benchThese.map((id) => {
+              const player = ctx.playersById[id];
+              return playerRow(player, ctx.rosFor(player), {
+                dim: true, quality: ctx.quality(player), bye: ctx.byeWeekFor(player), benchMe: true });
+            })))
+      : el("div", { class: "panel" }, el("h2", { text: "Lineup" }),
+          el("div", { class: "body" }, el("p", { class: "note", style: "margin-top:0", text:
+            isEdited() ? "This edit already fields the best lineup available."
+                       : "You are already starting the best lineup this roster can field." })));
+
+    const right = el("div", {}, swapPanel,
       el("div", { class: "panel" }, el("h2", { text: "Strength by position" }),
         el("div", { class: "body" }, strengthBars(profile),
           el("p", { class: "note", text: "Standard deviations from the league average at that position." }))),
@@ -595,7 +786,8 @@
       el("div", { class: "panel" }, el("h2", { text: "Trade chips" }),
         el("div", { class: "body" }, chips.length
           ? chips.slice(0, 6).map((chip) => playerRow(chip.player, ctx.rosFor(chip.player), {
-              after: "costs you " + n0(marginalOut(roster.active, chip.player.id,
+              bye: ctx.byeWeekFor(chip.player),
+              after: "costs you " + n0(marginalOut(ctx.rosters.get(profile.teamId).active, chip.player.id,
                 current().snap.league.rosterPositions, ctx.valueFor)) + " to lose" }))
           : el("p", { class: "note", text: "Nothing spare — every startable player you own is already starting." }))));
 

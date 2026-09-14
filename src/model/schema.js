@@ -61,15 +61,24 @@
  * @property {string} teamId
  * @property {string} playerId
  * @property {'starter'|'bench'|'ir'|'taxi'} slot
+ * @property {number|null} lineupSlot  For a starter, the INDEX into the league's
+ *                                     scoring slots — Sleeper's `starters` array is
+ *                                     positional, so index 6 in a
+ *                                     QB/RB/RB/WR/WR/TE/FLEX league is the FLEX.
+ *                                     This is the manager's actual declared lineup,
+ *                                     which is not the same as the optimal one.
  *
  * @typedef {Object} Projection
  * @property {string} playerId
  * @property {string} leagueId        projections can be scoring-type dependent
  * @property {string} season
  * @property {number} week
- * @property {number} projectedPoints
+ * @property {number} projectedPoints  a per-game RATE, never zeroed for a bye
+ * @property {number|null} byeWeek    the week this player's NFL team is off, or null
+ *                                    if unknown. Rest-of-season value counts GAMES,
+ *                                    so a bye still ahead costs one game.
  * @property {string|null} opponent   NFL team abbreviation, null on bye
- * @property {boolean} bye
+ * @property {boolean} bye            whether THIS row's week is the bye (informational)
  * @property {'custom'|'fantasypros'|'nflverse'} source
  *
  * @typedef {Object} Ranking

@@ -178,16 +178,27 @@ export function normalizeRosterSlots(rawRosters, internalLeagueId) {
   const slots = [];
   for (const roster of rawRosters) {
     const teamId = makeTeamId(internalLeagueId, String(roster.roster_id));
-    const starters = new Set((roster.starters ?? []).filter((p) => p && p !== '0'));
+    // `starters` is POSITIONAL: its index lines up with the league's scoring
+    // slots, so index 6 in QB/RB/RB/WR/WR/TE/FLEX is the flex. Collapsing it to
+    // a set of ids — which this used to do — discards the manager's actual
+    // lineup and leaves no way to show it back to them. Empty slots appear as
+    // '0' and must be skipped WITHOUT shifting the indexes after them.
+    const lineupSlotByPlayer = new Map();
+    (roster.starters ?? []).forEach((playerId, index) => {
+      if (playerId && playerId !== '0') lineupSlotByPlayer.set(playerId, index);
+    });
     const reserve = new Set(roster.reserve ?? []);
     const taxi = new Set(roster.taxi ?? []);
     const allPlayers = roster.players ?? [];
     for (const playerId of allPlayers) {
       let slot = ROSTER_SLOT.BENCH;
-      if (starters.has(playerId)) slot = ROSTER_SLOT.STARTER;
+      if (lineupSlotByPlayer.has(playerId)) slot = ROSTER_SLOT.STARTER;
       else if (reserve.has(playerId)) slot = ROSTER_SLOT.IR;
       else if (taxi.has(playerId)) slot = ROSTER_SLOT.TAXI;
-      slots.push({ leagueId: internalLeagueId, teamId, playerId, slot });
+      slots.push({
+        leagueId: internalLeagueId, teamId, playerId, slot,
+        lineupSlot: lineupSlotByPlayer.has(playerId) ? lineupSlotByPlayer.get(playerId) : null,
+      });
     }
   }
   return slots;

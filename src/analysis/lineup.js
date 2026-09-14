@@ -291,3 +291,64 @@ export function greedyLineup(players, rosterPositions, valueFor) {
   }
   return total;
 }
+
+/**
+ * The lineup the manager actually set, as opposed to the best one available.
+ *
+ * `optimalLineup` answers "what is this roster worth?". This answers "what did
+ * you start?" — and the gap between the two is the most actionable number in
+ * the whole tool, because unlike a trade or a waiver claim it costs nothing to
+ * close. Showing only the optimal lineup, as this used to, silently presents a
+ * lineup the manager never set as though it were theirs.
+ *
+ * A declared lineup is taken at face value, including choices the solver would
+ * not make. It can also be illegal or incomplete — a manager can leave a slot
+ * empty, and an ineligible assignment is reported rather than quietly moved.
+ *
+ * @param {Array} players           active players (never IR or taxi)
+ * @param {string[]} rosterPositions
+ * @param {(player: object) => number} valueFor
+ * @param {(playerId: string) => number|null} lineupSlotFor  index into the scoring slots
+ * @returns {{total: number, assignments: Array, unfilled: Array, benched: string[], illegal: Array}}
+ */
+export function declaredLineup(players, rosterPositions, valueFor, lineupSlotFor) {
+  const slots = scoringSlots(rosterPositions);
+  const byIndex = new Map();
+  const benched = [];
+  const illegal = [];
+
+  for (const player of players) {
+    const index = lineupSlotFor(player.id);
+    if (typeof index !== 'number' || index < 0 || index >= slots.length) {
+      benched.push(player.id);
+      continue;
+    }
+    // Two players claiming one slot means the source data is inconsistent;
+    // keep the first and bench the second rather than double-counting.
+    if (byIndex.has(index)) {
+      benched.push(player.id);
+      continue;
+    }
+    byIndex.set(index, player);
+  }
+
+  const assignments = [];
+  const unfilled = [];
+  let total = 0;
+
+  slots.forEach((slot, index) => {
+    const player = byIndex.get(index);
+    if (!player) {
+      unfilled.push({ slot, slotIndex: index });
+      return;
+    }
+    if (!canFill(slot, player.position)) {
+      illegal.push({ slot, slotIndex: index, playerId: player.id, position: player.position });
+    }
+    const value = valueFor(player) || 0;
+    total += value;
+    assignments.push({ slot, slotIndex: index, playerId: player.id, position: player.position, value });
+  });
+
+  return { total, assignments, unfilled, benched, illegal };
+}

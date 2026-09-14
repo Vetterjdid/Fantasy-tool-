@@ -12,9 +12,10 @@ this file is current.
 | 2 | Sleeper username → league discovery → identity | **Done**, verified against live responses |
 | 3 | Build step bundling `src/analysis/*` into the artifact | **Done** (`scripts/build-artifact.mjs`) |
 | 4 | Views: My Team, League, Waivers, Trade Finder, Saved | **Done** |
+| 6 | Declared lineup, lineup sandbox, schedule-derived byes | **Done** |
 | 5 | Real Sleeper data | **Done** — running on three live leagues |
 
-82 tests pass. Branch: `claude/live-artifact-tool-um585n`. Run `npm test` before
+102 tests pass. Branch: `claude/live-artifact-tool-um585n`. Run `npm test` before
 trusting anything.
 
 Not done: refresh is manual. `npm run fetch:live <username>` re-pulls the data,
@@ -23,7 +24,10 @@ schedule is the obvious next piece of work.
 
 ## The published artifact — do not orphan it
 
-**https://claude.ai/code/artifact/8bfc07fb-3b2b-41ce-a569-2a8e1ccbe63c** ("War Room", 🏈)
+**https://claude.ai/artifact/JHai6bK3eBb96WWGCNCwGP** ("War Room", 🏈)
+
+The older `claude.ai/code/artifact/8bfc07fb-…` form addresses the same artifact;
+the service now returns the short URL. Either works as `url:`.
 
 **Always republish by passing that `url:` explicitly.** Publishing without it
 creates a *separate* artifact, leaving the real one stale and stranding the
@@ -107,11 +111,16 @@ Corollaries worth keeping in mind before changing anything in `src/analysis/`:
   matching potentials to `NaN`.
 - Tie-breaks are deterministic `(value desc, position, id asc)`. Non-deterministic
   lineups jitter, and jitter manufactures phantom trades.
-- A projection row on a bye carries `projectedPoints: 0`. Used raw, every star on
-  bye reads as worthless and the engine screams "sell". Bye values are imputed
-  from the nearest-ranked healthy peer at the same position. `baseline.js` hard-codes
-  `bye: false` because week 1 has none — extending it past week 1 **must** consult
-  the schedule.
+- **Rest-of-season value counts GAMES, not weeks.** `baseline.js` emits a
+  per-game rate that is never zeroed, plus the player's `byeWeek` derived from
+  the real schedule (`src/projections/schedule.js`); a bye still ahead subtracts
+  one game. A bye is the ABSENCE of a row in `games.csv`, not a column — and
+  preseason/playoff rows must be excluded or the inference breaks.
+- A feed that reports a bye as `projectedPoints: 0` is still imputed over, from
+  the nearest-ranked healthy peer: taken raw, every star on bye reads as
+  worthless and the engine screams "sell". A feed that reports a real rate
+  ALONGSIDE a bye flag is left alone — imputing there would replace a good
+  number with a neighbour's.
 - A missing projection is `null`, never `0`. Rookies rely on this.
 - Replacement level is the **median of the top few free agents** — not the single
   best (one lucky waiver player would erase a whole position's tradeable value)
@@ -158,6 +167,30 @@ Trade suggestions are ordered for variety, not filtered: best two per manager
 first, then the rest by rank. A hard per-manager cap looks reasonable and leaves
 only ~8 of 60, because just four to six managers in a league ever have a workable
 trade.
+
+## Lineups: declared vs optimal
+
+Two different things, and conflating them was a real bug — the My Team view
+showed the solver's lineup under the heading "Starting lineup", presenting a
+lineup the manager never set as if it were theirs.
+
+- `optimalLineup` answers "what is this roster worth?"
+- `declaredLineup` answers "what did you actually start?"
+
+Sleeper's `starters` array is **positional**: index 6 in a
+QB/RB/RB/WR/WR/TE/FLEX league is the FLEX. `normalizeRosterSlots` records that
+index as `lineupSlot`; an earlier version collapsed the array to a set of ids
+and threw the ordering away. Empty slots appear as `'0'` and must be skipped
+WITHOUT shifting later indexes.
+
+The gap between the two is the most actionable number in the tool, because
+unlike a trade or a waiver claim it costs nothing to close. Report the
+difference as a SET (who is in, who is out) — slot-by-slot diffing reports
+RB1/RB2 reordering as a change, which is noise.
+
+The lineup sandbox (tap one player, tap another to swap) is **session-only and
+deliberately not persisted**: Sleeper owns the lineup, so a stored local copy
+would silently drift from it. Edits are never sent to Sleeper.
 
 ## Decisions already taken
 

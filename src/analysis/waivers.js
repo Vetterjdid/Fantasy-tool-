@@ -33,7 +33,7 @@ export const UNRANKABLE = ['K', 'DEF'];
  * looks on paper.
  */
 export function waiverBoard(context, teamId, { perPosition = 12 } = {}) {
-  const { league, rosters, available, valueFor, rosFor, vor, quality } = context;
+  const { league, rosters, available, valueFor, rosFor, vor, quality, byeWeekFor } = context;
   const roster = rosters.get(teamId);
   const active = roster ? roster.active : [];
   const before = optimalLineup(active, league.rosterPositions, valueFor);
@@ -61,6 +61,7 @@ export function waiverBoard(context, teamId, { perPosition = 12 } = {}) {
         ros: round1(rosFor(player) || 0),
         vor: round1(vor(player) || 0),
         quality: quality(player),
+        byeWeek: byeWeekFor ? byeWeekFor(player) : null,
         // What he adds before considering who leaves to make room.
         mvIn: round1(Math.max(0, after - before.total)),
         wouldStart: after - before.total > 0.01,

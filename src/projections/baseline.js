@@ -133,6 +133,7 @@ export function baselineProjections({
   season,
   week,
   scoringType,
+  byeWeeks = {},
 }) {
   const { bridge } = buildIdBridge(sleeperCatalog, nflversePlayers);
   const statsByGsis = new Map();
@@ -149,8 +150,10 @@ export function baselineProjections({
     if (!player) continue;
     const position = player.position;
 
+    const byeWeek = typeof byeWeeks[player.team] === 'number' ? byeWeeks[player.team] : null;
+
     if (FLAT_BASELINE[position] !== undefined) {
-      projections.push(makeRow(playerId, leagueId, season, week, FLAT_BASELINE[position], 'baseline-flat'));
+      projections.push(makeRow(playerId, leagueId, season, week, FLAT_BASELINE[position], 'baseline-flat', byeWeek));
       coverage.flat++;
       continue;
     }
@@ -164,7 +167,7 @@ export function baselineProjections({
       coverage.missingPlayers.push({ id: playerId, name: player.full_name, position });
       continue;
     }
-    projections.push(makeRow(playerId, leagueId, season, week, round1(points), 'baseline-2025'));
+    projections.push(makeRow(playerId, leagueId, season, week, round1(points), 'baseline-2025', byeWeek));
     coverage.observed++;
   }
 
@@ -175,17 +178,20 @@ function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
-function makeRow(playerId, leagueId, season, week, projectedPoints, source) {
+function makeRow(playerId, leagueId, season, week, projectedPoints, source, byeWeek = null) {
   return {
     playerId,
     leagueId,
     season,
     week,
+    // Always the per-game RATE, never zeroed for a bye. Zeroing is what makes a
+    // star on bye read as worthless; the bye is expressed as one game fewer in
+    // the rest-of-season multiplier instead, which is what it actually costs.
     projectedPoints,
-    // Byes begin around week 5; a week-1 snapshot has none. When this model is
-    // extended past week 1 the schedule has to be consulted here, because a
-    // bye read as zero is the single most damaging error in the whole engine.
-    bye: false,
+    byeWeek,
+    // Whether THIS week is the player's bye. Informational only — the value
+    // layer reads `byeWeek`, and only imputes over a bye that was zeroed.
+    bye: byeWeek !== null && byeWeek === Number(week),
     opponent: null,
     source,
   };

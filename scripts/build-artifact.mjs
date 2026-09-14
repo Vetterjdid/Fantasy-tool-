@@ -26,6 +26,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
  */
 const MODULES = [
   'src/model/schema.js',
+  'src/projections/schedule.js',
   'src/analysis/lineup.js',
   'src/analysis/value.js',
   'src/analysis/roster.js',

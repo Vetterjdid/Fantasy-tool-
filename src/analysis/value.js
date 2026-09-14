@@ -14,6 +14,7 @@
  */
 
 import { optimalLineup, eligiblePositions, isScoringSlot } from './lineup.js';
+import { gamesRemaining } from '../projections/schedule.js';
 
 export const DEFAULT_FANTASY_END_WEEK = 17;
 
@@ -42,26 +43,46 @@ function median(values) {
 /**
  * Rest-of-season value per player.
  *
- * HONESTY NOTE: `weeks` is a constant multiplier, so it changes no ordering.
- * The real content of this function is bye-week imputation and availability
- * discounting; the multiplier only puts deltas in readable season units.
- * It does NOT model future bye weeks (we only know the current week's flag),
- * schedule strength, injury-return timing, usage trend, or playoff matchups.
+ * `base` is a per-game rate; the multiplier is GAMES remaining, not weeks. When
+ * a projection carries the player's bye week and that bye is still ahead, he is
+ * credited with one game fewer — which is the difference between a model that
+ * knows a bye costs you a week and one that quietly bills for a game nobody
+ * plays. Without a known bye week the multiplier is the full remaining count,
+ * the same as before byes were modelled.
  *
- * Bye handling is the highest-severity correctness issue in the whole engine:
- * a projection row on a bye carries projectedPoints 0, so used raw, every
- * star on bye looks worthless and the engine screams "sell". We impute from
- * the nearest-ranked player at the same position who is not on a bye.
+ * HONESTY NOTE: the multiplier is near-constant, so it changes little ordering
+ * beyond separating players whose byes have passed from those whose have not.
+ * The real content here is still bye handling and availability discounting.
+ * It does NOT model schedule strength, injury-return timing, usage trend, or
+ * playoff matchups.
  *
- * @returns {Map<string, {ros: number|null, base: number|null, quality: string, availability: number}>}
+ * Bye handling is the highest-severity correctness issue in the whole engine.
+ * A feed that reports a bye week as zero points makes every star on bye look
+ * worthless, and the engine then screams "sell" about exactly the players you
+ * should keep — so a zeroed bye is imputed from the nearest-ranked healthy peer
+ * at the same position. A feed that reports a real rate ALONGSIDE a bye flag is
+ * left alone: it already told the truth, and imputing over it would replace a
+ * good number with a neighbour's.
+ *
+ * @returns {Map<string, {ros: number|null, base: number|null, quality: string,
+ *                        availability: number, games: number, byeWeek: number|null}>}
  */
-export function restOfSeasonValues(players, { projectionFor, rankingFor, weeks }) {
+export function restOfSeasonValues(players, {
+  projectionFor,
+  rankingFor,
+  weeks,
+  currentWeek = null,
+  endWeek = DEFAULT_FANTASY_END_WEEK,
+}) {
   const observed = new Map(); // position -> [{rank, base}]
   const bases = new Map();    // position -> [base]
 
   for (const player of players) {
     const projection = projectionFor(player);
-    if (!projection || typeof projection.projectedPoints !== 'number' || projection.bye) continue;
+    if (!projection || typeof projection.projectedPoints !== 'number') continue;
+    // Only a ZEROED bye is unusable as a peer reference. A real rate reported
+    // alongside a bye flag is exactly the kind of number we want to impute from.
+    if (projection.bye && projection.projectedPoints === 0) continue;
     const base = projection.projectedPoints;
     if (!bases.has(player.position)) bases.set(player.position, []);
     bases.get(player.position).push(base);
@@ -96,7 +117,9 @@ export function restOfSeasonValues(players, { projectionFor, rankingFor, weeks }
     let quality = 'missing';
 
     if (projection && typeof projection.projectedPoints === 'number') {
-      if (projection.bye) {
+      if (projection.bye && projection.projectedPoints === 0) {
+        // The feed zeroed a bye week. Taken at face value this is the single
+        // most destructive error in the engine, so borrow a healthy peer's rate.
         base = impute(player);
         quality = base === null ? 'missing' : 'bye-imputed';
       } else {
@@ -105,11 +128,18 @@ export function restOfSeasonValues(players, { projectionFor, rankingFor, weeks }
       }
     }
 
+    const byeWeek = projection && typeof projection.byeWeek === 'number' ? projection.byeWeek : null;
+    const games = currentWeek === null
+      ? weeks
+      : gamesRemaining({ byeWeek, currentWeek, endWeek, weeks });
+
     out.set(player.id, {
       base,
       quality,
       availability,
-      ros: base === null ? null : base * weeks * availability,
+      byeWeek,
+      games,
+      ros: base === null ? null : base * games * availability,
     });
   }
   return out;

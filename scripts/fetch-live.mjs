@@ -18,6 +18,7 @@ import { dirname, join } from 'node:path';
 import { fetchState, loadAllLeagues, fetchPlayersCatalog, computeWaiverWire, normalizePlayersCatalog } from '../src/integrations/sleeper.js';
 import { baselineProjections } from '../src/projections/baseline.js';
 import { parseCsv } from '../src/util/csv.js';
+import { byeWeeksFromGames } from '../src/projections/schedule.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DATA = join(ROOT, 'data');
@@ -66,11 +67,22 @@ async function main() {
 
   // Prior season: this season has no completed weeks to average yet.
   const priorSeason = String(Number(season) - 1);
-  const [nflversePlayers, nflverseStats] = await Promise.all([
+  const [nflversePlayers, nflverseStats, games] = await Promise.all([
     cachedCsv('players.csv', `${NFLVERSE}/players/players.csv`, refresh),
     cachedCsv(`stats_${priorSeason}.csv`, `${NFLVERSE}/stats_player/stats_player_reg_${priorSeason}.csv`, refresh),
+    cachedCsv('games.csv', `${NFLVERSE}/schedules/games.csv`, refresh),
   ]);
   process.stderr.write(`nflverse: ${nflversePlayers.length} players, ${nflverseStats.length} ${priorSeason} stat lines\n`);
+
+  // Byes are the absence of a game, so they have to be derived from the
+  // schedule rather than read off a column.
+  const { byeWeeks, anomalies } = byeWeeksFromGames(games, season);
+  process.stderr.write(`byes: ${Object.keys(byeWeeks).length} teams` +
+    (anomalies.length ? ` (${anomalies.length} without exactly one bye: ${anomalies.map(a => a.team).join(',')})` : '') + '\n');
+  if (Object.keys(byeWeeks).length < 30) {
+    process.stderr.write('  WARNING: fewer than 30 teams have a bye week. Rest-of-season value will\n' +
+      '  credit players with games they will not play. Check the schedule download.\n');
+  }
 
   const snapshots = [];
   for (const { league, teams, rosterSlots, myTeamId } of leagues) {
@@ -89,6 +101,7 @@ async function main() {
       season,
       week,
       scoringType: league.scoringType,
+      byeWeeks,
     });
 
     const { projections: waiverProjections } = baselineProjections({
@@ -100,6 +113,7 @@ async function main() {
       season,
       week,
       scoringType: league.scoringType,
+      byeWeeks,
     });
 
     // Keep the best 30 free agents per position: enough for an honest
